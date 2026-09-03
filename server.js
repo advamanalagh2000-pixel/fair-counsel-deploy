@@ -1,8 +1,22 @@
 require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
 const path = require('path');
 const { execSync } = require('child_process');
+
+/**
+ * Regenerate the Prisma client before anything below requires it. Some hosts
+ * (GoDaddy's Node.js hosting among them) reuse a cached node_modules across
+ * deploys and skip `npm install`, so a schema.prisma change (like adding
+ * binaryTargets for a different OpenSSL version) would otherwise never take
+ * effect. This runs on every boot; `prisma generate` is fast and idempotent.
+ */
+try {
+  execSync('npx prisma generate', { cwd: __dirname, stdio: 'inherit' });
+} catch (err) {
+  console.error('Prisma generate failed on startup:', err.message);
+}
+
+const express = require('express');
+const cors = require('cors');
 
 const app = express();
 app.use(cors());
