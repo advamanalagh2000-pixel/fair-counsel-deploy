@@ -1,5 +1,6 @@
 require('dotenv').config();
 const path = require('path');
+const fs = require('fs');
 const { execSync } = require('child_process');
 
 /**
@@ -13,6 +14,33 @@ try {
   execSync('npx prisma generate', { cwd: __dirname, stdio: 'inherit' });
 } catch (err) {
   console.error('Prisma generate failed on startup:', err.message);
+}
+
+/**
+ * Prisma's own runtime OpenSSL detection is unreliable on Linux hosts like
+ * GoDaddy's (it logs "failed to detect the libssl/openssl version...
+ * defaulting to openssl-1.1.x" and that default is wrong there, that host
+ * only has OpenSSL 3.x). Rather than trust that guess, look at which query
+ * engine binaries actually got generated on disk (via the binaryTargets in
+ * schema.prisma) and point Prisma at a non-1.1.x one directly, bypassing its
+ * detection entirely. Linux-only: macOS uses a different file type
+ * (.dylib.node) and its normal, already-working default selection, this
+ * whole problem is specific to the Linux/OpenSSL-3.0 host.
+ */
+if (process.platform === 'linux') {
+  try {
+    const enginesDir = path.join(__dirname, 'node_modules', '.prisma', 'client');
+    const candidates = fs.readdirSync(enginesDir).filter(f => f.startsWith('libquery_engine-') && f.endsWith('.so.node'));
+    const preferred = candidates.find(f => f.includes('openssl-3.0.x')) || candidates.find(f => !f.includes('openssl-1.1.x'));
+    if (preferred) {
+      process.env.PRISMA_QUERY_ENGINE_LIBRARY = path.join(enginesDir, preferred);
+      console.log('Using Prisma query engine binary:', preferred);
+    } else {
+      console.warn('No non-openssl-1.1.x Prisma query engine binary found among:', candidates);
+    }
+  } catch (err) {
+    console.error('Could not select a Prisma query engine binary:', err.message);
+  }
 }
 
 const express = require('express');
@@ -58,12 +86,24 @@ const PORT = process.env.PORT || 4000;
  * commands. Safe to run on every boot: `prisma migrate deploy` is a no-op
  * once migrations are already applied, and seed.js only inserts rows when
  * its tables are empty.
+ *
+ * On hosts where Prisma's migration engine binary itself won't run (see the
+ * README note on GoDaddy's OpenSSL mismatch), a pre-migrated, pre-seeded
+ * database file ships as part of the deploy instead (checked in at the path
+ * DATABASE_URL resolves to), so migrate deploy is skipped entirely rather
+ * than logging a crash on every boot for a step that already isn't needed.
  */
 async function start() {
-  try {
-    execSync('npx prisma migrate deploy', { cwd: __dirname, stdio: 'inherit' });
-  } catch (err) {
-    console.error('Prisma migrate deploy failed on startup:', err.message);
+  const dbFile = (process.env.DATABASE_URL || '').replace(/^file:/, '');
+  const dbPath = dbFile ? path.join(__dirname, 'prisma', dbFile) : null;
+  if (dbPath && fs.existsSync(dbPath)) {
+    console.log('Database file already present, skipping prisma migrate deploy:', dbPath);
+  } else {
+    try {
+      execSync('npx prisma migrate deploy', { cwd: __dirname, stdio: 'inherit' });
+    } catch (err) {
+      console.error('Prisma migrate deploy failed on startup:', err.message);
+    }
   }
   try {
     await require('./src/seed').seed();
