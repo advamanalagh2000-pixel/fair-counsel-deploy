@@ -31,12 +31,34 @@ if (process.platform === 'linux') {
   try {
     const enginesDir = path.join(__dirname, 'node_modules', '.prisma', 'client');
     const candidates = fs.readdirSync(enginesDir).filter(f => f.startsWith('libquery_engine-') && f.endsWith('.so.node'));
-    const preferred = candidates.find(f => f.includes('openssl-3.0.x')) || candidates.find(f => !f.includes('openssl-1.1.x'));
-    if (preferred) {
-      process.env.PRISMA_QUERY_ENGINE_LIBRARY = path.join(enginesDir, preferred);
-      console.log('Using Prisma query engine binary:', preferred);
+    // Try musl variants first (this host turned out to be Alpine/musl, not
+    // glibc, discovered from a "ld-linux-x86-64.so.2 not found" failure when
+    // a glibc binary was picked by name alone), then other non-1.1.x
+    // variants, then 1.1.x as a last resort. Each candidate is verified by
+    // actually loading it before committing to it, since guessing by name
+    // has already been wrong once, this makes the choice self-correcting
+    // regardless of what this or any other host turns out to need.
+    const ordered = [
+      ...candidates.filter(f => f.includes('musl')),
+      ...candidates.filter(f => !f.includes('musl') && !f.includes('openssl-1.1.x')),
+      ...candidates.filter(f => !f.includes('musl') && f.includes('openssl-1.1.x'))
+    ];
+    let chosen = null;
+    for (const candidate of ordered) {
+      const enginePath = path.join(enginesDir, candidate);
+      try {
+        execSync(`node -e "require(${JSON.stringify(enginePath)})"`, { stdio: 'ignore' });
+        chosen = candidate;
+        break;
+      } catch {
+        // doesn't load on this system, try the next candidate
+      }
+    }
+    if (chosen) {
+      process.env.PRISMA_QUERY_ENGINE_LIBRARY = path.join(enginesDir, chosen);
+      console.log('Using Prisma query engine binary:', chosen);
     } else {
-      console.warn('No non-openssl-1.1.x Prisma query engine binary found among:', candidates);
+      console.warn('No working Prisma query engine binary found among:', candidates);
     }
   } catch (err) {
     console.error('Could not select a Prisma query engine binary:', err.message);
