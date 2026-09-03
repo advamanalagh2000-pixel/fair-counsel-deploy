@@ -1,0 +1,31 @@
+{
+  "name": "fair-counsel-backend",
+  "version": "0.1.0",
+  "description": "Fair Counsel backend: real auth sessions (client, lawyer, admin), OTP delivery, payments, document storage, and Aadhaar eSign, behind a swappable provider layer, backed by a real database via Prisma.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "seed": "node src/seed.js",
+    "migrate": "prisma migrate dev",
+    "postinstall": "prisma generate",
+    "sync-frontend": "cp ../fair-counsel-frontend.html public/index.html",
+    "build:zip": "bash scripts/build-zip.sh"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.6.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "prisma": "^5.22.0",
+    "uuid": "^9.0.1"
+  },
+  "optionalDependencies": {
+    "razorpay": "^2.9.4"
+  }
+}

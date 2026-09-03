@@ -1,0 +1,176 @@
+// Fair Counsel data model.
+//
+// Provider is SQLite for zero-setup local development (no separate database
+// server to install or run). To move to Postgres for a real deployment:
+//   1. Set DATABASE_URL in .env to a postgres:// connection string
+//   2. Change `provider = "sqlite"` below to `provider = "postgresql"`
+//   3. Run `npx prisma migrate dev` again
+// Nothing in src/routes or src/services needs to change — they only ever
+// talk to the Prisma client, never to SQL or files directly.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(uuid())
+  phone       String   @unique
+  name        String   @default("")
+  clientType  String   @default("individual") // individual | company
+  companyName String?
+  gstin       String?
+  createdAt   DateTime @default(now())
+
+  cases Case[]
+}
+
+model Otp {
+  id             String    @id @default(uuid())
+  phone          String
+  codeHash       String
+  purpose        String    @default("client") // client | lawyer
+  attempts       Int       @default(0)
+  consumed       Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  expiresAt      DateTime
+  pendingProfile String? // JSON-encoded { name, clientType, companyName, gstin }
+
+  @@index([phone, consumed])
+}
+
+model Admin {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  role         String   @default("admin") // admin | superadmin. Only superadmin can create/list other admin accounts
+  createdAt    DateTime @default(now())
+}
+
+model Lawyer {
+  id                     String   @id @default(uuid())
+  name                   String
+  phone                  String?  @unique
+  email                  String?
+  init                   String   @default("")
+  tags                   String   @default("[]") // JSON-encoded string[]
+  specs                  String   @default("[]") // JSON-encoded string[]
+  city                   String   @default("")
+  langs                  String   @default("[]") // JSON-encoded string[]
+  experienceYears        Int      @default(0)
+  badge                  String   @default("verified") // verified | fave
+  consultationsCompleted Int      @default(0)
+  feePaise               Int      @default(0)
+  bar                    String   @default("")
+  bio                    String   @default("")
+  turnaround             String   @default("")
+  starting               String   @default("")
+  status                 String   @default("pending") // pending | verified | rejected
+  rejectionReason        String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  cases   Case[]
+  payouts Payout[]
+}
+
+model Case {
+  id         String   @id @default(uuid())
+  fileCode   String   @unique
+  clientId   String
+  client     User     @relation(fields: [clientId], references: [id])
+  lawyerId   String
+  lawyer     Lawyer   @relation(fields: [lawyerId], references: [id])
+  category   String
+  notes      String   @default("")
+  status     String   @default("awaiting_client") // awaiting_client -> in_review -> payment_pending -> closed
+  stage      String   @default("consultation") // consultation -> advance -> final
+  channel    String   @default("video") // video | phone
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  payments  Payment[]
+  documents Document[]
+  payouts   Payout[]
+
+  @@index([clientId])
+  @@index([lawyerId])
+}
+
+model Payment {
+  id                String    @id @default(uuid())
+  caseId            String
+  case              Case      @relation(fields: [caseId], references: [id])
+  stage             String // consultation | advance | final
+  amountPaise       Int
+  orderId           String
+  status            String    @default("created") // created | paid | failed
+  razorpayPaymentId String?
+  createdAt         DateTime  @default(now())
+  paidAt            DateTime?
+
+  payouts Payout[]
+
+  @@index([caseId])
+}
+
+model Document {
+  id               String    @id @default(uuid())
+  caseId           String
+  case             Case      @relation(fields: [caseId], references: [id])
+  uploadedBy       String // User.id or Lawyer.id
+  uploadedByRole   String    @default("user") // user | lawyer
+  originalName     String
+  storedPath       String
+  mimeType         String
+  sizeBytes        Int
+  status           String    @default("approved") // pending_review | approved | rejected. Lawyer-uploaded drafts start pending_review, client's own uploads are auto-approved (nothing to gate)
+  reviewedBy       String? // admin username
+  rejectionReason  String?
+  reviewedAt       DateTime?
+  createdAt        DateTime  @default(now())
+
+  esignRecords EsignRecord[]
+
+  @@index([caseId])
+}
+
+model EsignRecord {
+  id             String    @id @default(uuid())
+  documentId     String
+  document       Document  @relation(fields: [documentId], references: [id])
+  userId         String
+  requestId      String    @unique
+  status         String
+  signedAt       DateTime?
+  certificateRef String?
+  createdAt      DateTime  @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  type      String // ok | no | info
+  text      String
+  createdAt DateTime @default(now())
+}
+
+model Payout {
+  id               String   @id @default(uuid())
+  lawyerId         String
+  lawyer           Lawyer   @relation(fields: [lawyerId], references: [id])
+  caseId           String
+  case             Case     @relation(fields: [caseId], references: [id])
+  paymentId        String
+  payment          Payment  @relation(fields: [paymentId], references: [id])
+  grossPaise       Int
+  platformFeePaise Int
+  netPayablePaise  Int
+  status           String   @default("pending_payout")
+  createdAt        DateTime @default(now())
+
+  @@index([lawyerId])
+}
