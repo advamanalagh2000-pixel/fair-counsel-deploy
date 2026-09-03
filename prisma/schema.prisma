@@ -9,7 +9,12 @@
 // talk to the Prisma client, never to SQL or files directly.
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // "native" covers local dev on this Mac. The others cover common Linux
+  // hosting environments with different OpenSSL versions than Prisma's
+  // auto-detection guesses correctly, GoDaddy's Node hosting in particular
+  // only has OpenSSL 3.x available, not the 1.1.x Prisma defaults to.
+  binaryTargets = ["native", "debian-openssl-3.0.x", "debian-openssl-1.1.x", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
