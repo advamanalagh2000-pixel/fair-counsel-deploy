@@ -47,7 +47,10 @@ if (process.platform === 'linux') {
     for (const candidate of ordered) {
       const enginePath = path.join(enginesDir, candidate);
       try {
-        execSync(`node -e "require(${JSON.stringify(enginePath)})"`, { stdio: 'ignore' });
+        // Load it directly in this process rather than spawning a subprocess,
+        // some hosts restrict spawning child processes, which would make
+        // every candidate look broken even if it would load fine directly.
+        require(enginePath);
         chosen = candidate;
         break;
       } catch {
