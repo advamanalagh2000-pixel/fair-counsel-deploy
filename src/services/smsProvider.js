@@ -33,14 +33,27 @@ async function sendViaMetaWhatsApp(phone, code) {
   throw new Error('Meta WhatsApp not configured, add META_WHATSAPP_TOKEN/META_PHONE_NUMBER_ID to .env and complete sendViaMetaWhatsApp()');
 }
 
+let twilioClient = null;
+function getTwilioClient() {
+  if (!process.env.TWILIO_SID || !process.env.TWILIO_AUTH_TOKEN) {
+    throw new Error('Twilio not configured, add TWILIO_SID and TWILIO_AUTH_TOKEN to .env');
+  }
+  if (!twilioClient) {
+    twilioClient = require('twilio')(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
+  }
+  return twilioClient;
+}
+
 async function sendViaTwilioWhatsApp(phone, code) {
-  // const twilio = require('twilio')(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
-  // await twilio.messages.create({
-  //   body: `Your Fair Counsel verification code is ${code}`,
-  //   from: `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`,
-  //   to: `whatsapp:+91${phone}`
-  // });
-  throw new Error('Twilio WhatsApp not configured, add TWILIO_SID/TWILIO_AUTH_TOKEN/TWILIO_WHATSAPP_FROM to .env and complete sendViaTwilioWhatsApp()');
+  if (!process.env.TWILIO_WHATSAPP_FROM) {
+    throw new Error('TWILIO_WHATSAPP_FROM not set, use the sandbox number (whatsapp:+14155238886) for testing, or your own approved sender for production');
+  }
+  const client = getTwilioClient();
+  await client.messages.create({
+    body: `Your Fair Counsel verification code is ${code}`,
+    from: `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`,
+    to: `whatsapp:+91${phone}`
+  });
 }
 
 async function sendViaGupshup(phone, code) {
@@ -62,9 +75,15 @@ async function sendViaMsg91(phone, code) {
 }
 
 async function sendViaTwilioSms(phone, code) {
-  // const twilio = require('twilio')(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
-  // await twilio.messages.create({ body: `Your Fair Counsel verification code is ${code}`, from: process.env.TWILIO_FROM_NUMBER, to: `+91${phone}` });
-  throw new Error('Twilio SMS not configured, add TWILIO_SID/TWILIO_AUTH_TOKEN/TWILIO_FROM_NUMBER to .env and complete sendViaTwilioSms()');
+  if (!process.env.TWILIO_FROM_NUMBER) {
+    throw new Error('TWILIO_FROM_NUMBER not set, add your Twilio SMS-capable number to .env');
+  }
+  const client = getTwilioClient();
+  await client.messages.create({
+    body: `Your Fair Counsel verification code is ${code}`,
+    from: process.env.TWILIO_FROM_NUMBER,
+    to: `+91${phone}`
+  });
 }
 
 async function sendWhatsApp(phone, code) {
