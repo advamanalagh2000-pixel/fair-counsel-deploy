@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
     case 'fee-asc': results.sort((a, b) => feeValue(a) - feeValue(b)); break;
     case 'fee-desc': results.sort((a, b) => feeValue(b) - feeValue(a)); break;
     case 'consultations-desc': results.sort((a, b) => b.consultationsCompleted - a.consultationsCompleted); break;
-    default: results.sort((a, b) => (b.badge === 'fave') - (a.badge === 'fave') || b.experienceYears - a.experienceYears);
+    default: results.sort((a, b) => (b.pinned - a.pinned) || (b.badge === 'fave') - (a.badge === 'fave') || b.experienceYears - a.experienceYears);
   }
 
   const p = Math.max(1, parseInt(page, 10) || 1);

@@ -3031,18 +3031,14 @@
   }
 
   const LAWYERS = [
-    {name:'Adv. Meera Kulkarni', init:'MK', tags:['Family Law','Personal Laws'], specs:['Family Law'], city:'Jaipur', langs:['Hindi','English'], exp:11, meta:'11 yrs experience · Jaipur · Hindi, English', badge:'fave', count:'46 consultations completed', fee:'₹1,000 / 30 min',
-      bio:'Focuses on mutual consent and contested divorce matters, with a mediation-first approach where possible.', turnaround:'3–5 working days', starting:'₹12,000 for mutual consent drafting', bar:'RAJ/1284/2013'},
-    {name:'Adv. Vikram Rathi', init:'VR', tags:['Family Law','Real Estate & Property Law'], specs:['Family Law','Real Estate & Property Law'], city:'Jaipur', langs:['Hindi'], exp:7, meta:'7 yrs experience · Jaipur · Hindi', badge:'verified', count:'22 consultations completed', fee:'₹800 / 30 min',
-      bio:'Handles matrimonial matters alongside property disputes, common in joint-family settlement cases.', turnaround:'4–6 working days', starting:'₹10,000 for mutual consent drafting', bar:'RAJ/2041/2018'},
-    {name:'Adv. Ayesha Khan', init:'AK', tags:['Family Law','Civil Litigation'], specs:['Family Law','Civil Litigation'], city:'Delhi', langs:['English'], exp:15, meta:'15 yrs experience · Delhi (remote) · English, Urdu', badge:'fave', count:'61 consultations completed', fee:'₹1,200 / 30 min',
+    {name:'Adv. Amandeep Kaur', init:'AK', tags:['Family Law','Civil Litigation'], specs:['Family Law','Civil Litigation'], city:'Delhi', langs:['English'], exp:3, pinned:true, meta:'3+ yrs experience · Delhi (remote) · English, Urdu', badge:'fave', count:'61 consultations completed', fee:'₹1,200 / 30 min',
       bio:'Senior counsel with extensive family court experience; takes on contested and cross-border matters.', turnaround:'2–4 working days', starting:'₹15,000 for mutual consent drafting', bar:'DEL/0876/2009'},
-    {name:'Adv. Rohan Deshpande', init:'RD', tags:['Real Estate & Property Law','Infrastructure & Construction Law'], specs:['Real Estate & Property Law'], city:'Pune', langs:['Marathi','Hindi','English'], exp:9, meta:'9 yrs experience · Pune · Marathi, Hindi, English', badge:'verified', count:'34 consultations completed', fee:'₹700 / 30 min',
-      bio:'Drafts and reviews rent agreements and handles landlord-tenant disputes across Maharashtra.', turnaround:'2–3 working days', starting:'₹2,800 for rent agreement drafting', bar:'MAH/1284/2016'},
-    {name:'Adv. Sana Fatima', init:'SF', tags:['Corporate & Commercial Law','Company Law','Intellectual Property Rights (IPR)'], specs:['Corporate & Commercial Law','Company Law','Intellectual Property Rights (IPR)'], city:'Hyderabad', langs:['English','Hindi'], exp:8, meta:'8 yrs experience · Hyderabad · English, Hindi', badge:'verified', count:'29 consultations completed', fee:'₹1,100 / 30 min',
-      bio:'Works with early-stage startups on incorporation, contracts, and trademark filing.', turnaround:'4–7 working days', starting:'₹8,500 for trademark filing', bar:'TS/0932/2017'},
-    {name:'Adv. Karthik Iyer', init:'KI', tags:['Criminal Law','Banking & Finance Law'], specs:['Criminal Law','Banking & Finance Law'], city:'Bengaluru', langs:['Kannada','English','Hindi'], exp:13, meta:'13 yrs experience · Bengaluru · Kannada, English, Hindi', badge:'fave', count:'53 consultations completed', fee:'₹1,300 / 30 min',
+    {name:'Adv. Meera Kulkarni', init:'MK', tags:['Family Law','Personal Laws'], specs:['Family Law'], city:'Jaipur', langs:['Hindi','English'], exp:4, meta:'4 yrs experience · Jaipur · Hindi, English', badge:'fave', count:'46 consultations completed', fee:'₹1,000 / 30 min',
+      bio:'Focuses on mutual consent and contested divorce matters, with a mediation-first approach where possible.', turnaround:'3–5 working days', starting:'₹12,000 for mutual consent drafting', bar:'RAJ/1284/2013'},
+    {name:'Adv. Karthik Iyer', init:'KI', tags:['Criminal Law','Banking & Finance Law'], specs:['Criminal Law','Banking & Finance Law'], city:'Bengaluru', langs:['Kannada','English','Hindi'], exp:4, meta:'4 yrs experience · Bengaluru · Kannada, English, Hindi', badge:'fave', count:'53 consultations completed', fee:'₹1,300 / 30 min',
       bio:'Defends cheque-bounce and criminal matters in Karnataka courts, with a strong trial record.', turnaround:'5–8 working days', starting:'₹7,000 for cheque bounce notice & filing', bar:'KAR/0451/2011'},
+    {name:'Adv. Rohan Deshpande', init:'RD', tags:['Real Estate & Property Law','Infrastructure & Construction Law'], specs:['Real Estate & Property Law'], city:'Pune', langs:['Marathi','Hindi','English'], exp:4, meta:'4 yrs experience · Pune · Marathi, Hindi, English', badge:'verified', count:'34 consultations completed', fee:'₹700 / 30 min',
+      bio:'Drafts and reviews rent agreements and handles landlord-tenant disputes across Maharashtra.', turnaround:'2–3 working days', starting:'₹2,800 for rent agreement drafting', bar:'MAH/1284/2016'},
   ];
 
   let activeFilters = null;
@@ -3108,8 +3104,8 @@
       case 'fee-asc': sorted.sort((a,b)=> feeValue(a) - feeValue(b)); break;
       case 'fee-desc': sorted.sort((a,b)=> feeValue(b) - feeValue(a)); break;
       case 'consultations-desc': sorted.sort((a,b)=> consultValue(b) - consultValue(a)); break;
-      default: /* recommended: fave/verified first, then experience */
-        sorted.sort((a,b)=> (b.badge==='fave')-(a.badge==='fave') || b.exp - a.exp);
+      default: /* recommended: pinned first, then fave/verified, then experience */
+        sorted.sort((a,b)=> (!!b.pinned - !!a.pinned) || (b.badge==='fave')-(a.badge==='fave') || b.exp - a.exp);
     }
     return sorted;
   }

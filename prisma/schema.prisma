@@ -68,6 +68,7 @@ model Lawyer {
   langs                  String   @default("[]") // JSON-encoded string[]
   experienceYears        Int      @default(0)
   badge                  String   @default("verified") // verified | fave
+  pinned                 Boolean  @default(false) // shown first in "recommended" search results, regardless of badge/experience
   consultationsCompleted Int      @default(0)
   feePaise               Int      @default(0)
   bar                    String   @default("")
