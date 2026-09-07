@@ -2095,8 +2095,10 @@
     }
   }
 
-  // Entering the search screen no longer requires phone verification —
-  // verification is now required later, when moving from search to the lawyer shortlist.
+  // Browsing search and the shortlist doesn't require phone verification —
+  // verification is required later, when a client requests an appointment
+  // with a specific lawyer (see requireVerification() calls on the
+  // "Request Appointment" buttons).
   function enterSearch(){
     document.getElementById('clientStepper').style.display = 'block';
     updateTypeBadge();
@@ -3025,7 +3027,7 @@
       btn.style.marginTop = '4px';
       btn.style.alignSelf = 'flex-start';
       btn.textContent = 'See matching lawyers';
-      btn.onclick = ()=> requireVerification(()=> go('shortlist', true));
+      btn.onclick = ()=> go('shortlist', true);
       body.appendChild(btn);
     }, 1100);
   }
@@ -3061,7 +3063,7 @@
     };
     currentPage = 1;
     saveState();
-    requireVerification(()=> go('shortlist', true));
+    go('shortlist', true);
   }
 
   function showSkeleton(){
@@ -3243,7 +3245,7 @@
           <div class="fee">${l.fee}</div>
           <div style="margin-top:12px"><button class="btn btn-primary">${tr('requestAppointmentBtn')}</button></div>
         </div>`;
-      card.querySelector('.btn-primary').onclick = ()=> requestLawyer(l.id, l.name);
+      card.querySelector('.btn-primary').onclick = ()=> requireVerification(()=> { go('shortlist'); requestLawyer(l.id, l.name); });
       grid.appendChild(card);
     });
   }
