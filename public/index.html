@@ -584,7 +584,7 @@
         </div>
       </div>
       <button class="admin-toggle" id="lawyerToggleBtn" onclick="enterLawyerPortal()" data-i18n="lawyerView">Careers</button>
-      <button class="admin-toggle" id="adminToggleBtn" onclick="openAdminGate()" data-i18n="adminView">Admin view</button>
+      <button class="admin-toggle" id="adminToggleBtn" onclick="openAdminGate()" data-i18n="adminView" style="display:none">Admin view</button>
     </div>
   </div>
   <div class="stepper" id="clientStepper" style="display:none">
@@ -4384,6 +4384,24 @@
         <div><strong>Consultation cancelled.</strong> If you cancelled at least 24 hours in advance, your ₹1,000 consultation fee will be refunded within 5-7 business days.</div>
       </div>`;
   }
+
+  // The "Admin view" button is hidden from the public by default (a live
+  // site shouldn't advertise an admin panel to every visitor). Visiting once
+  // with ?admin=1 in the URL reveals it and remembers that on this browser
+  // via localStorage, so it stays visible on future visits from the same
+  // device without needing the URL parameter again. The real access control
+  // is still the admin password, this is just about not showing the button
+  // to random visitors.
+  (function(){
+    try{
+      const params = new URLSearchParams(window.location.search);
+      if(params.get('admin') === '1') localStorage.setItem('fc_show_admin_btn', '1');
+      if(localStorage.getItem('fc_show_admin_btn') === '1'){
+        const btn = document.getElementById('adminToggleBtn');
+        if(btn) btn.style.display = '';
+      }
+    }catch(e){ /* localStorage unavailable, button stays hidden, still reachable via ?admin=1 each visit */ }
+  })();
 
   loadState();
   renderStepper();
