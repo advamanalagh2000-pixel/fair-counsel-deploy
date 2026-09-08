@@ -31,7 +31,8 @@ model User {
   gstin       String?
   createdAt   DateTime @default(now())
 
-  cases Case[]
+  cases          Case[]
+  supportTickets SupportTicket[]
 }
 
 model Otp {
@@ -99,9 +100,10 @@ model Case {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  payments  Payment[]
-  documents Document[]
-  payouts   Payout[]
+  payments       Payment[]
+  documents      Document[]
+  payouts        Payout[]
+  supportTickets SupportTicket[]
 
   @@index([clientId])
   @@index([lawyerId])
@@ -179,4 +181,20 @@ model Payout {
   createdAt        DateTime @default(now())
 
   @@index([lawyerId])
+}
+
+model SupportTicket {
+  id        String    @id @default(uuid())
+  clientId  String
+  client    User      @relation(fields: [clientId], references: [id])
+  caseId    String?
+  case      Case?     @relation(fields: [caseId], references: [id])
+  subject   String
+  details   String    @default("")
+  status    String    @default("open") // open | resolved
+  createdAt DateTime  @default(now())
+  resolvedAt DateTime?
+  resolvedBy String? // admin username
+
+  @@index([clientId])
 }

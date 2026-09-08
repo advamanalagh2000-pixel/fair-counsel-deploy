@@ -1,6 +1,5 @@
 require('dotenv').config();
 const path = require('path');
-const fs = require('fs');
 const { execSync } = require('child_process');
 
 /**
@@ -14,58 +13,6 @@ try {
   execSync('npx prisma generate', { cwd: __dirname, stdio: 'inherit' });
 } catch (err) {
   console.error('Prisma generate failed on startup:', err.message);
-}
-
-/**
- * Prisma's own runtime OpenSSL detection is unreliable on Linux hosts like
- * GoDaddy's (it logs "failed to detect the libssl/openssl version...
- * defaulting to openssl-1.1.x" and that default is wrong there, that host
- * only has OpenSSL 3.x). Rather than trust that guess, look at which query
- * engine binaries actually got generated on disk (via the binaryTargets in
- * schema.prisma) and point Prisma at a non-1.1.x one directly, bypassing its
- * detection entirely. Linux-only: macOS uses a different file type
- * (.dylib.node) and its normal, already-working default selection, this
- * whole problem is specific to the Linux/OpenSSL-3.0 host.
- */
-if (process.platform === 'linux') {
-  try {
-    const enginesDir = path.join(__dirname, 'node_modules', '.prisma', 'client');
-    const candidates = fs.readdirSync(enginesDir).filter(f => f.startsWith('libquery_engine-') && f.endsWith('.so.node'));
-    // Try musl variants first (this host turned out to be Alpine/musl, not
-    // glibc, discovered from a "ld-linux-x86-64.so.2 not found" failure when
-    // a glibc binary was picked by name alone), then other non-1.1.x
-    // variants, then 1.1.x as a last resort. Each candidate is verified by
-    // actually loading it before committing to it, since guessing by name
-    // has already been wrong once, this makes the choice self-correcting
-    // regardless of what this or any other host turns out to need.
-    const ordered = [
-      ...candidates.filter(f => f.includes('musl')),
-      ...candidates.filter(f => !f.includes('musl') && !f.includes('openssl-1.1.x')),
-      ...candidates.filter(f => !f.includes('musl') && f.includes('openssl-1.1.x'))
-    ];
-    let chosen = null;
-    for (const candidate of ordered) {
-      const enginePath = path.join(enginesDir, candidate);
-      try {
-        // Load it directly in this process rather than spawning a subprocess,
-        // some hosts restrict spawning child processes, which would make
-        // every candidate look broken even if it would load fine directly.
-        require(enginePath);
-        chosen = candidate;
-        break;
-      } catch {
-        // doesn't load on this system, try the next candidate
-      }
-    }
-    if (chosen) {
-      process.env.PRISMA_QUERY_ENGINE_LIBRARY = path.join(enginesDir, chosen);
-      console.log('Using Prisma query engine binary:', chosen);
-    } else {
-      console.warn('No working Prisma query engine binary found among:', candidates);
-    }
-  } catch (err) {
-    console.error('Could not select a Prisma query engine binary:', err.message);
-  }
 }
 
 const express = require('express');
@@ -86,6 +33,7 @@ app.use('/api/cases', require('./src/routes/cases'));
 app.use('/api/payments', require('./src/routes/payments'));
 app.use('/api/documents', require('./src/routes/documents'));
 app.use('/api/esign', require('./src/routes/esign'));
+app.use('/api/support', require('./src/routes/support'));
 app.use('/api/admin', require('./src/routes/admin'));
 
 // Serves the frontend (public/index.html, kept in sync with the top-level
@@ -111,24 +59,12 @@ const PORT = process.env.PORT || 4000;
  * commands. Safe to run on every boot: `prisma migrate deploy` is a no-op
  * once migrations are already applied, and seed.js only inserts rows when
  * its tables are empty.
- *
- * On hosts where Prisma's migration engine binary itself won't run (see the
- * README note on GoDaddy's OpenSSL mismatch), a pre-migrated, pre-seeded
- * database file ships as part of the deploy instead (checked in at the path
- * DATABASE_URL resolves to), so migrate deploy is skipped entirely rather
- * than logging a crash on every boot for a step that already isn't needed.
  */
 async function start() {
-  const dbFile = (process.env.DATABASE_URL || '').replace(/^file:/, '');
-  const dbPath = dbFile ? path.join(__dirname, 'prisma', dbFile) : null;
-  if (dbPath && fs.existsSync(dbPath)) {
-    console.log('Database file already present, skipping prisma migrate deploy:', dbPath);
-  } else {
-    try {
-      execSync('npx prisma migrate deploy', { cwd: __dirname, stdio: 'inherit' });
-    } catch (err) {
-      console.error('Prisma migrate deploy failed on startup:', err.message);
-    }
+  try {
+    execSync('npx prisma migrate deploy', { cwd: __dirname, stdio: 'inherit' });
+  } catch (err) {
+    console.error('Prisma migrate deploy failed on startup:', err.message);
   }
   try {
     await require('./src/seed').seed();

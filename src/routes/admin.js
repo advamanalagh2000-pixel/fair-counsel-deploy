@@ -130,4 +130,76 @@ router.post('/admins', requireSuperAdmin, async (req, res) => {
   res.status(201).json({ id: admin.id, username: admin.username, role: admin.role, createdAt: admin.createdAt });
 });
 
+/** GET /api/admin/support-tickets?status=open|resolved */
+router.get('/support-tickets', requireAdmin, async (req, res) => {
+  const { status } = req.query;
+  const where = status ? { status } : {};
+  const tickets = await prisma.supportTicket.findMany({ where, orderBy: { createdAt: 'desc' } });
+  const clientIds = [...new Set(tickets.map(t => t.clientId))];
+  const caseIds = [...new Set(tickets.map(t => t.caseId).filter(Boolean))];
+  const [clients, cases] = await Promise.all([
+    prisma.user.findMany({ where: { id: { in: clientIds } } }),
+    prisma.case.findMany({ where: { id: { in: caseIds } } })
+  ]);
+  const clientById = Object.fromEntries(clients.map(u => [u.id, u]));
+  const caseById = Object.fromEntries(cases.map(c => [c.id, c]));
+
+  res.json(tickets.map(t => ({
+    ...t,
+    clientName: clientById[t.clientId] ? (clientById[t.clientId].name || clientById[t.clientId].phone) : null,
+    clientPhone: clientById[t.clientId] ? clientById[t.clientId].phone : null,
+    fileCode: t.caseId && caseById[t.caseId] ? caseById[t.caseId].fileCode : null
+  })));
+});
+
+/** POST /api/admin/support-tickets/:id/resolve */
+router.post('/support-tickets/:id/resolve', requireAdmin, async (req, res) => {
+  const ticket = await prisma.supportTicket.findUnique({ where: { id: req.params.id } });
+  if (!ticket) return res.status(404).json({ error: 'Not found' });
+  const updated = await prisma.supportTicket.update({
+    where: { id: ticket.id },
+    data: { status: 'resolved', resolvedAt: new Date(), resolvedBy: req.admin.username }
+  });
+  logAudit('ok', `Support ticket "${ticket.subject}" resolved by admin "${req.admin.username}"`);
+  res.json(updated);
+});
+
+/** GET /api/admin/lawyers — every lawyer, any status (unlike the public search, which only returns verified) */
+router.get('/lawyers', requireAdmin, async (req, res) => {
+  const lawyers = await prisma.lawyer.findMany({ orderBy: { createdAt: 'desc' } });
+  res.json(lawyers.map(serializeLawyer));
+});
+
+/** DELETE /api/admin/lawyers/:id — blocked if the lawyer has any case history, to preserve payment/audit records */
+router.delete('/lawyers/:id', requireAdmin, async (req, res) => {
+  const lawyer = await prisma.lawyer.findUnique({ where: { id: req.params.id } });
+  if (!lawyer) return res.status(404).json({ error: 'Not found' });
+  const caseCount = await prisma.case.count({ where: { lawyerId: lawyer.id } });
+  if (caseCount > 0) {
+    return res.status(400).json({ error: `${lawyer.name} has ${caseCount} case(s) on record and can't be deleted. Reject or otherwise disable their profile instead of deleting it, to keep case and payment history intact.` });
+  }
+  await prisma.lawyer.delete({ where: { id: lawyer.id } });
+  logAudit('no', `Lawyer profile "${lawyer.name}" deleted by admin "${req.admin.username}"`);
+  res.json({ ok: true });
+});
+
+/** GET /api/admin/users — every client account */
+router.get('/users', requireAdmin, async (req, res) => {
+  const users = await prisma.user.findMany({ orderBy: { createdAt: 'desc' } });
+  res.json(users);
+});
+
+/** DELETE /api/admin/users/:id — blocked if the client has any case history, to preserve payment/audit records */
+router.delete('/users/:id', requireAdmin, async (req, res) => {
+  const user = await prisma.user.findUnique({ where: { id: req.params.id } });
+  if (!user) return res.status(404).json({ error: 'Not found' });
+  const caseCount = await prisma.case.count({ where: { clientId: user.id } });
+  if (caseCount > 0) {
+    return res.status(400).json({ error: `This client has ${caseCount} case(s) on record and can't be deleted, to keep case and payment history intact.` });
+  }
+  await prisma.user.delete({ where: { id: user.id } });
+  logAudit('no', `Client profile "${user.name || user.phone}" deleted by admin "${req.admin.username}"`);
+  res.json({ ok: true });
+});
+
 module.exports = router;

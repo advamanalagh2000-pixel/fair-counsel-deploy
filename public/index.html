@@ -1561,6 +1561,8 @@
       <button class="dash-tab" id="dashTabBtn-drafts" onclick="switchDashTab('drafts',this)">Draft review <span class="dash-tab-count" id="dashTabCount-drafts">1</span></button>
       <button class="dash-tab" id="dashTabBtn-tickets" onclick="switchDashTab('tickets',this)">Support tickets <span class="dash-tab-count" id="dashTabCount-tickets">1</span></button>
       <button class="dash-tab" id="dashTabBtn-cases" onclick="switchDashTab('cases',this)">All cases</button>
+      <button class="dash-tab" id="dashTabBtn-lawyers" onclick="switchDashTab('lawyers',this)">Lawyers</button>
+      <button class="dash-tab" id="dashTabBtn-clients" onclick="switchDashTab('clients',this)">Clients</button>
       <button class="dash-tab" id="dashTabBtn-audit" onclick="switchDashTab('audit',this)">Activity log <span class="dash-tab-count" id="dashTabCount-audit">0</span></button>
       <button class="dash-tab" id="adminsTabBtn" style="display:none" onclick="switchDashTab('admins',this)">Admins</button>
     </div>
@@ -1630,16 +1632,35 @@
     <div class="dash-panel" id="dashPanel-tickets">
       <p class="scroll-hint">↔ swipe to see all columns</p><div class="table-scroll">
 <table class="dash-table">
-        <thead><tr><th>File</th><th>Status</th><th>Details</th></tr></thead>
-        <tbody id="ticketList">
-          <tr>
-            <td class="mono">FILE FC/2026/00098</td>
-            <td><span class="status-pill status-wait">Awaiting reply</span></td>
-            <td>Client unhappy with clause wording, requesting review.</td>
-          </tr>
-        </tbody>
+        <thead><tr><th>Client</th><th>File</th><th>Subject</th><th>Details</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="ticketList"></tbody>
       </table>
 </div>
+      <div class="dash-empty" id="dashTicketsEmpty" style="display:none">No support tickets yet.</div>
+    </div>
+
+    <!-- ALL LAWYERS (any status), with delete -->
+    <div class="dash-panel" id="dashPanel-lawyers">
+      <p class="revision-note" style="margin-top:0">Every lawyer profile on the platform, regardless of verification status. Deleting is blocked while a lawyer has case history, to keep payment and audit records intact.</p>
+      <p class="scroll-hint">↔ swipe to see all columns</p><div class="table-scroll">
+<table class="dash-table">
+        <thead><tr><th>Name</th><th>Specialisation · City</th><th>Status</th><th>Phone</th><th>Action</th></tr></thead>
+        <tbody id="dashLawyerRows"></tbody>
+      </table>
+</div>
+      <div class="dash-empty" id="dashLawyersEmpty" style="display:none">No lawyers yet.</div>
+    </div>
+
+    <!-- ALL CLIENTS, with delete -->
+    <div class="dash-panel" id="dashPanel-clients">
+      <p class="revision-note" style="margin-top:0">Every client account. Deleting is blocked while a client has case history, to keep payment and audit records intact.</p>
+      <p class="scroll-hint">↔ swipe to see all columns</p><div class="table-scroll">
+<table class="dash-table">
+        <thead><tr><th>Name</th><th>Phone</th><th>Type</th><th>Joined</th><th>Action</th></tr></thead>
+        <tbody id="dashClientRows"></tbody>
+      </table>
+</div>
+      <div class="dash-empty" id="dashClientsEmpty" style="display:none">No clients yet.</div>
     </div>
 
     <!-- ALL CASES -->
@@ -3502,6 +3523,9 @@
     if(name === 'audit') loadAdminAuditLog();
     if(name === 'drafts') loadAdminDraftQueue();
     if(name === 'admins') loadAdminAdmins();
+    if(name === 'tickets') loadAdminSupportTickets();
+    if(name === 'lawyers') loadAdminAllLawyers();
+    if(name === 'clients') loadAdminClients();
   }
 
   // ============== ACCESSIBILITY: auto-associate labels with their control ==============
@@ -3544,6 +3568,7 @@
       go('admin');
       loadAdminVerifyQueue();
       loadAdminDraftQueue();
+      loadAdminSupportTickets();
       loadAdminAuditLog();
       showToast('Signed in, this is a real backend session, not a client-side check.');
     }catch(e){
@@ -3809,6 +3834,103 @@
     }
   }
 
+  // ============== ADMIN: support tickets ==============
+  async function loadAdminSupportTickets(){
+    const tbody = document.getElementById('ticketList');
+    tbody.innerHTML = '<tr><td colspan="6">Loading…</td></tr>';
+    try{
+      const tickets = await api('/admin/support-tickets', { admin:true });
+      document.getElementById('dashTicketsEmpty').style.display = tickets.length === 0 ? 'block' : 'none';
+      const openCount = tickets.filter(t=>t.status==='open').length;
+      document.getElementById('dashTicketCount').textContent = openCount;
+      document.getElementById('dashTabCount-tickets').textContent = openCount;
+      tbody.innerHTML = tickets.map(t => `
+        <tr>
+          <td>${t.clientName || 'unknown'}${t.clientPhone ? ' · '+t.clientPhone : ''}</td>
+          <td class="mono">${t.fileCode ? 'FILE '+t.fileCode : '—'}</td>
+          <td>${t.subject}</td>
+          <td>${t.details || ''}</td>
+          <td><span class="status-pill ${t.status==='open' ? 'status-wait' : 'status-review'}">${t.status==='open' ? 'Open' : 'Resolved'}</span></td>
+          <td>${t.status==='open' ? `<button class="mini-btn approve" onclick="resolveTicket('${t.id}', this)">Mark resolved</button>` : ''}</td>
+        </tr>`).join('');
+    }catch(e){
+      tbody.innerHTML = `<tr><td colspan="6">Couldn't load support tickets: ${e.message || 'unknown error'}</td></tr>`;
+    }
+  }
+  async function resolveTicket(id, btn){
+    try{
+      await api(`/admin/support-tickets/${id}/resolve`, { method:'POST', admin:true });
+      showToast('Ticket marked resolved.');
+      loadAdminSupportTickets();
+      loadAdminAuditLog();
+    }catch(e){
+      showToast(e.message || 'Could not resolve ticket.');
+    }
+  }
+
+  // ============== ADMIN: all lawyers, with delete ==============
+  async function loadAdminAllLawyers(){
+    const tbody = document.getElementById('dashLawyerRows');
+    tbody.innerHTML = '<tr><td colspan="5">Loading…</td></tr>';
+    try{
+      const lawyers = await api('/admin/lawyers', { admin:true });
+      document.getElementById('dashLawyersEmpty').style.display = lawyers.length === 0 ? 'block' : 'none';
+      const statusPill = { verified: 'status-review', pending: 'status-wait', rejected: 'status-quote' };
+      tbody.innerHTML = lawyers.map(l => `
+        <tr data-lawyer-row="${l.id}">
+          <td><strong style="color:var(--navy)">${l.name}</strong></td>
+          <td>${l.specs.join(', ')} · ${l.city}</td>
+          <td><span class="status-pill ${statusPill[l.status] || 'status-wait'}">${l.status}</span></td>
+          <td class="mono" style="font-size:11.5px">${l.phone || '—'}</td>
+          <td><button class="mini-btn reject" onclick="deleteLawyerProfile('${l.id}', '${l.name.replace(/'/g,"\\'")}')">Delete</button></td>
+        </tr>`).join('');
+    }catch(e){
+      tbody.innerHTML = `<tr><td colspan="5">Couldn't load lawyers: ${e.message || 'unknown error'}</td></tr>`;
+    }
+  }
+  async function deleteLawyerProfile(id, name){
+    if(!confirm(`Delete ${name}'s profile? This can't be undone, and only works if they have no case history.`)) return;
+    try{
+      await api(`/admin/lawyers/${id}`, { method:'DELETE', admin:true });
+      showToast(`${name}'s profile deleted.`);
+      loadAdminAllLawyers();
+      loadAdminAuditLog();
+    }catch(e){
+      showToast(e.message || 'Could not delete this lawyer.');
+    }
+  }
+
+  // ============== ADMIN: all clients, with delete ==============
+  async function loadAdminClients(){
+    const tbody = document.getElementById('dashClientRows');
+    tbody.innerHTML = '<tr><td colspan="5">Loading…</td></tr>';
+    try{
+      const clients = await api('/admin/users', { admin:true });
+      document.getElementById('dashClientsEmpty').style.display = clients.length === 0 ? 'block' : 'none';
+      tbody.innerHTML = clients.map(u => `
+        <tr data-client-row="${u.id}">
+          <td><strong style="color:var(--navy)">${u.name || 'unnamed'}</strong></td>
+          <td class="mono" style="font-size:11.5px">${u.phone}</td>
+          <td>${u.clientType}${u.companyName ? ' · '+u.companyName : ''}</td>
+          <td class="mono" style="font-size:11.5px;color:#8a8674">${new Date(u.createdAt).toLocaleDateString('en-IN',{dateStyle:'medium'})}</td>
+          <td><button class="mini-btn reject" onclick="deleteClientProfile('${u.id}', '${(u.name||u.phone).replace(/'/g,"\\'")}')">Delete</button></td>
+        </tr>`).join('');
+    }catch(e){
+      tbody.innerHTML = `<tr><td colspan="5">Couldn't load clients: ${e.message || 'unknown error'}</td></tr>`;
+    }
+  }
+  async function deleteClientProfile(id, name){
+    if(!confirm(`Delete ${name}'s profile? This can't be undone, and only works if they have no case history.`)) return;
+    try{
+      await api(`/admin/users/${id}`, { method:'DELETE', admin:true });
+      showToast(`${name}'s profile deleted.`);
+      loadAdminClients();
+      loadAdminAuditLog();
+    }catch(e){
+      showToast(e.message || 'Could not delete this client.');
+    }
+  }
+
   async function loadAdminAuditLog(){
     try{
       const log = await api('/admin/audit-log', { admin:true });
@@ -4006,8 +4128,29 @@
   function closeTicket(){
     closeModalGeneric('ticketModal','ticketOverlay');
   }
-  function submitTicket(){
+  async function submitTicket(){
     const subject = document.getElementById('ticketSubject').value;
+    const details = document.getElementById('ticketDetails').value;
+
+    if(backendReachable && authToken){
+      try{
+        const ticket = await api('/support/tickets', { method:'POST', body:{
+          caseId: currentCaseId || undefined, subject, details
+        }});
+        document.getElementById('ticketBody').innerHTML = `
+          <div class="pending-box" style="background:var(--sage-l);border-color:#cfe0cb">
+            <div><strong>Ticket raised.</strong><br>Reference: <span class="mono">${ticket.id.slice(0,8).toUpperCase()}</span><br>
+            Fair Counsel will respond within 24 hours.</div>
+          </div>`;
+        showToast('Support ticket raised, saved to the real backend.');
+        return;
+      }catch(e){
+        showToast(e.message || 'Could not raise the ticket, try again in a moment.');
+        return;
+      }
+    }
+
+    // Local demo-mode fallback (backend unreachable or not logged in).
     const code = 'LB-TKT-2026-' + Math.floor(1000+Math.random()*9000);
     document.getElementById('ticketBody').innerHTML = `
       <div class="pending-box" style="background:var(--sage-l);border-color:#cfe0cb">
@@ -4015,13 +4158,6 @@
         Fair Counsel will respond within 24 hours.</div>
       </div>`;
     const entryText = subject + ', raised by client';
-    const list = document.getElementById('ticketList');
-    const row = document.createElement('tr');
-    row.innerHTML = `<td class="mono">FILE FC/2026/00142</td><td><span class="status-pill status-wait">New</span></td><td>${entryText} just now.</td>`;
-    list.prepend(row);
-    const ticketN = document.querySelectorAll('#ticketList tr').length;
-    document.getElementById('dashTicketCount').textContent = ticketN;
-    document.getElementById('dashTabCount-tickets').textContent = ticketN;
     ticketSubjects.push(entryText);
     pushAudit('info', `Support ticket raised: ${entryText} (ref ${code})`);
     saveState();
