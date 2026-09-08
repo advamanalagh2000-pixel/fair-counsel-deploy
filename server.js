@@ -1,4 +1,9 @@
-require('dotenv').config();
+// dotenv only loads a local .env file for development, the deployed app has
+// no .env file (secrets come from the host's own environment variables), so
+// treat a missing/failed install of this dev-only dependency as harmless
+// rather than a fatal crash, this platform's npm install has been
+// unreliable about fully completing before.
+try { require('dotenv').config(); } catch (err) { console.warn('dotenv not available, continuing without a local .env file:', err.message); }
 const path = require('path');
 const { execSync } = require('child_process');
 
