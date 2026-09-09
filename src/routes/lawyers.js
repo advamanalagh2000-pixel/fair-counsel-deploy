@@ -10,31 +10,36 @@ function feeValue(l) { return l.feePaise || 0; }
 
 /** GET /api/lawyers?spec=&city=&lang=&exp=&sort=&page=&pageSize= */
 router.get('/', async (req, res) => {
-  const { spec, city, lang, exp, sort = 'recommended', page = '1', pageSize = '4' } = req.query;
+  try {
+    const { spec, city, lang, exp, sort = 'recommended', page = '1', pageSize = '4' } = req.query;
 
-  const where = { status: 'verified' };
-  if (spec && spec !== 'Any') where.specs = { contains: `"${spec}"` };
-  if (city && city !== 'Any') where.city = city;
-  if (lang && lang !== 'Any') where.langs = { contains: `"${lang}"` };
-  if (exp && exp !== 'Any') where.experienceYears = { gte: parseInt(exp, 10) || 0 };
+    const where = { status: 'verified' };
+    if (spec && spec !== 'Any') where.specs = { contains: `"${spec}"` };
+    if (city && city !== 'Any') where.city = city;
+    if (lang && lang !== 'Any') where.langs = { contains: `"${lang}"` };
+    if (exp && exp !== 'Any') where.experienceYears = { gte: parseInt(exp, 10) || 0 };
 
-  let results = (await prisma.lawyer.findMany({ where })).map(serializePublicLawyer);
+    let results = (await prisma.lawyer.findMany({ where })).map(serializePublicLawyer);
 
-  switch (sort) {
-    case 'exp-desc': results.sort((a, b) => b.experienceYears - a.experienceYears); break;
-    case 'fee-asc': results.sort((a, b) => feeValue(a) - feeValue(b)); break;
-    case 'fee-desc': results.sort((a, b) => feeValue(b) - feeValue(a)); break;
-    case 'consultations-desc': results.sort((a, b) => b.consultationsCompleted - a.consultationsCompleted); break;
-    default: results.sort((a, b) => (b.pinned - a.pinned) || (b.badge === 'fave') - (a.badge === 'fave') || b.experienceYears - a.experienceYears);
+    switch (sort) {
+      case 'exp-desc': results.sort((a, b) => b.experienceYears - a.experienceYears); break;
+      case 'fee-asc': results.sort((a, b) => feeValue(a) - feeValue(b)); break;
+      case 'fee-desc': results.sort((a, b) => feeValue(b) - feeValue(a)); break;
+      case 'consultations-desc': results.sort((a, b) => b.consultationsCompleted - a.consultationsCompleted); break;
+      default: results.sort((a, b) => (b.pinned - a.pinned) || (b.badge === 'fave') - (a.badge === 'fave') || b.experienceYears - a.experienceYears);
+    }
+
+    const p = Math.max(1, parseInt(page, 10) || 1);
+    const size = Math.max(1, parseInt(pageSize, 10) || 4);
+    const total = results.length;
+    const start = (p - 1) * size;
+    const pageResults = results.slice(start, start + size);
+
+    res.json({ total, page: p, pageSize: size, totalPages: Math.max(1, Math.ceil(total / size)), results: pageResults });
+  } catch (err) {
+    console.error('GET /api/lawyers failed:', err);
+    res.status(500).json({ error: 'Could not load lawyers right now' });
   }
-
-  const p = Math.max(1, parseInt(page, 10) || 1);
-  const size = Math.max(1, parseInt(pageSize, 10) || 4);
-  const total = results.length;
-  const start = (p - 1) * size;
-  const pageResults = results.slice(start, start + size);
-
-  res.json({ total, page: p, pageSize: size, totalPages: Math.max(1, Math.ceil(total / size)), results: pageResults });
 });
 
 /** POST /api/lawyers/apply — public application form, lands in the admin verification queue */

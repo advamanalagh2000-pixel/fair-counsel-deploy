@@ -6,6 +6,7 @@
 try { require('dotenv').config(); } catch (err) { console.warn('dotenv not available, continuing without a local .env file:', err.message); }
 const path = require('path');
 const { execSync } = require('child_process');
+const fs = require('fs');
 
 /**
  * Regenerate the Prisma client before anything below requires it. Some hosts
@@ -19,6 +20,63 @@ try {
 } catch (err) {
   console.error('Prisma generate failed on startup:', err.message);
 }
+
+/**
+ * Prisma's own runtime auto-detection of which query engine binary to load
+ * has repeatedly guessed wrong on this host (GoDaddy's Node hosting is
+ * Alpine/musl, not glibc, and its OpenSSL version isn't what Prisma expects
+ * by default). binaryTargets in schema.prisma ships candidates for several
+ * environments, but Prisma still picks one via its own heuristic at query
+ * time. Since the query engine only loads lazily, on the FIRST actual query
+ * (not at `new PrismaClient()`), a wrong guess doesn't show up until some
+ * request calls the database, and by then it's an unhandled rejection deep
+ * inside a route handler. So: scan the generated engine binaries ourselves,
+ * try loading each candidate in-process (not via a spawned subprocess, since
+ * this platform may restrict subprocess spawning) until one actually works,
+ * and pin Prisma to that one explicitly via PRISMA_QUERY_ENGINE_LIBRARY
+ * before any route (and therefore any Prisma query) can run.
+ */
+if (process.platform === 'linux') {
+  try {
+    const enginesDir = path.join(__dirname, 'node_modules', '.prisma', 'client');
+    const candidates = fs.readdirSync(enginesDir).filter(f => f.startsWith('libquery_engine-') && f.endsWith('.so.node'));
+    const ordered = [
+      ...candidates.filter(f => f.includes('musl')),
+      ...candidates.filter(f => !f.includes('musl') && !f.includes('openssl-1.1.x')),
+      ...candidates.filter(f => !f.includes('musl') && f.includes('openssl-1.1.x'))
+    ];
+    let chosen = null;
+    for (const candidate of ordered) {
+      const enginePath = path.join(enginesDir, candidate);
+      try { require(enginePath); chosen = candidate; break; } catch {}
+    }
+    if (chosen) {
+      process.env.PRISMA_QUERY_ENGINE_LIBRARY = path.join(enginesDir, chosen);
+      console.log('Using Prisma query engine binary:', chosen);
+    } else {
+      console.warn('No working Prisma query engine binary found among:', candidates);
+    }
+  } catch (err) {
+    console.error('Could not select a Prisma query engine binary:', err.message);
+  }
+}
+
+/**
+ * None of the ~35 async route handlers in src/routes catch their own errors,
+ * and Express 4 does not propagate a rejected promise from an async handler
+ * to the error middleware on its own (that's an Express 5 behavior). Without
+ * this, a single failing request (e.g. a Prisma error) becomes an unhandled
+ * rejection, which Node treats as fatal and kills the whole process, taking
+ * every other visitor down with it, and the platform then boots a fresh
+ * process that dies the same way on the next such request. Logging instead
+ * of crashing keeps the rest of the site up even when one request fails.
+ */
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection (process staying up):', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception (process staying up):', err);
+});
 
 const express = require('express');
 const cors = require('cors');
