@@ -122,12 +122,27 @@ const PORT = process.env.PORT || 4000;
  * commands. Safe to run on every boot: `prisma migrate deploy` is a no-op
  * once migrations are already applied, and seed.js only inserts rows when
  * its tables are empty.
+ *
+ * `prisma migrate deploy` runs through a separate schema-engine binary (not
+ * the query engine PRISMA_QUERY_ENGINE_LIBRARY controls above), which has
+ * the same musl/OpenSSL incompatibility on this host and can't be fixed the
+ * same way. Rather than chase that binary too, this repo ships a pre-built,
+ * pre-migrated, pre-seeded SQLite file (prisma/prisma/prod.db) directly in
+ * git, rebuilt locally after every schema change. If that file is already
+ * there, skip migrate deploy entirely instead of letting it fail on every
+ * boot for no benefit.
  */
 async function start() {
-  try {
-    execSync('npx prisma migrate deploy', { cwd: __dirname, stdio: 'inherit' });
-  } catch (err) {
-    console.error('Prisma migrate deploy failed on startup:', err.message);
+  const dbFile = (process.env.DATABASE_URL || '').replace(/^file:/, '');
+  const dbPath = dbFile ? path.join(__dirname, 'prisma', dbFile) : null;
+  if (dbPath && fs.existsSync(dbPath)) {
+    console.log('Database file already present, skipping prisma migrate deploy:', dbPath);
+  } else {
+    try {
+      execSync('npx prisma migrate deploy', { cwd: __dirname, stdio: 'inherit' });
+    } catch (err) {
+      console.error('Prisma migrate deploy failed on startup:', err.message);
+    }
   }
   try {
     await require('./src/seed').seed();
