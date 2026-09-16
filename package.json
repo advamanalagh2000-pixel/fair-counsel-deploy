@@ -10,7 +10,7 @@
     "seed": "node src/seed.js",
     "migrate": "prisma migrate dev",
     "postinstall": "prisma generate",
-    "sync-frontend": "cp ../fair-counsel-frontend.html public/index.html",
+    "sync-frontend": "cp ../../fair-counsel-frontend.html public/index.html",
     "build:zip": "bash scripts/build-zip.sh"
   },
   "dependencies": {

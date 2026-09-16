@@ -85,6 +85,7 @@
   .step.active .num{background:var(--navy);border-color:var(--navy);color:var(--white);}
   .step.done .num{background:var(--sage);border-color:var(--sage);color:var(--white);}
   .step.done{color:var(--sage);}
+  .step.locked{cursor:default;opacity:0.5;}
 
   main{min-height:70vh;}
   .screen{display:none;padding:44px 0 80px;}
@@ -2033,6 +2034,13 @@
     {id:'tracker', label:'Track', key:'stepTrack'}
   ];
   let currentIndex = 0;
+  // The furthest step the client has actually reached in this session, not
+  // just the current one, so going back to review "Search" doesn't relock
+  // "Book"/"Pay" steps already completed. Only steps up to this point are
+  // clickable in the stepper, everything past it has to be reached by
+  // actually completing the flow (picking a lawyer, paying, etc), not by
+  // clicking ahead in the breadcrumb.
+  let maxIndexReached = 0;
 
   function renderStepper(){
     const el = document.getElementById('stepper');
@@ -2040,11 +2048,12 @@
     const shortLang = currentLang === 'HI' ? 'hi' : 'en';
     STEP_LABELS.forEach((s,i)=>{
       const d = document.createElement('div');
-      d.className = 'step' + (i===currentIndex?' active':'') + (i<currentIndex?' done':'');
+      const locked = i > maxIndexReached;
+      d.className = 'step' + (i===currentIndex?' active':'') + (i<currentIndex?' done':'') + (locked?' locked':'');
       const entry = I18N_DICT[s.key];
       const label = entry ? (entry[shortLang] !== undefined ? entry[shortLang] : entry.en) : s.label;
       d.innerHTML = `<span class="num">${i+1}</span>${label}`;
-      d.onclick = ()=> go(s.id);
+      if(!locked) d.onclick = ()=> go(s.id);
       el.appendChild(d);
     });
   }
@@ -2053,7 +2062,10 @@
     document.querySelectorAll('main.wrap .screen').forEach(s=>s.classList.remove('active'));
     document.getElementById('screen-'+id).classList.add('active');
     const idx = STEP_LABELS.findIndex(s=>s.id===id);
-    if(idx>-1) currentIndex = idx;
+    if(idx>-1){
+      currentIndex = idx;
+      maxIndexReached = Math.max(maxIndexReached, idx);
+    }
     renderStepper();
     window.scrollTo({top:0, behavior:'smooth'});
     if(id==='chat') runChat();
