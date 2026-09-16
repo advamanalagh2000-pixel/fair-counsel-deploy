@@ -360,6 +360,7 @@
   .notif-item:last-child{border-bottom:none;}
   .notif-item strong{color:var(--navy);display:block;font-size:12.5px;margin-bottom:2px;}
   .notif-time{color:#8a8674;font-size:10.5px;}
+  .notif-empty{color:#8a8674;text-align:center;padding:20px 16px;}
 
   /* MESSAGE PREVIEW */
   .msg-preview-toggle{background:none;border:none;color:var(--brass);font-size:12px;font-weight:600;text-decoration:underline;padding:0;margin-top:10px;}
@@ -579,9 +580,7 @@
       <div style="position:relative">
         <button class="icon-btn" id="notifBtn" onclick="toggleNotif()" aria-haspopup="true" aria-expanded="false" aria-label="Notifications">🔔<span class="notif-dot" id="notifDot"></span></button>
         <div class="notif-drop" id="notifDrop" role="menu" aria-label="Notifications">
-          <div class="notif-item"><strong>Draft under review</strong>Your case FILE FC/2026/00142 is being checked by Fair Counsel before it reaches you.<div class="notif-time">2 hours ago</div></div>
-          <div class="notif-item"><strong>Consultation confirmed</strong>Adv. Meera Kulkarni confirmed Thu, 13 Aug · 11:30 AM.<div class="notif-time">Yesterday</div></div>
-          <div class="notif-item"><strong>Welcome to Fair Counsel</strong>Your account is ready. Search or describe your legal need to get started.<div class="notif-time">3 days ago</div></div>
+          <div class="notif-item notif-empty">No notifications yet.</div>
         </div>
       </div>
       <button class="admin-toggle" id="lawyerToggleBtn" onclick="enterLawyerPortal()" data-i18n="lawyerView">Careers</button>
@@ -3080,7 +3079,7 @@
   let sortBy = 'recommended';
   let currentPage = 1;
   const PAGE_SIZE = 4;
-  let notifRead = false;
+  let notifRead = true; // no real notification backend yet, nothing new to flag by default
   let removedVerifyNames = [];
   let removedDraftNames = [];
   let adminAuditLog = [];
