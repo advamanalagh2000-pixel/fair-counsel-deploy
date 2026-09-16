@@ -2514,8 +2514,14 @@
     }catch(e){ /* corrupted/unavailable storage, start fresh */ }
   }
   function applyLoadedStateToUI(){
+    // Page load always lands on the homepage (screen-intro) regardless of
+    // persisted state, so showing the stepper here (just because a past
+    // visit had picked individual/company) put the full step breadcrumb
+    // above the homepage hero before the client had done anything this
+    // session. The stepper should only appear once they actually reach
+    // step 1 (enterSearch(), below, already handles that). The type badge
+    // is independent of the stepper and fine to restore immediately.
     if(clientType){
-      document.getElementById('clientStepper').style.display = 'block';
       updateTypeBadge();
     }
     if(loggedIn){
