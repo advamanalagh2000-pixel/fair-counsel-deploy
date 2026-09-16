@@ -2055,6 +2055,13 @@
   function go(id, withLoading){
     document.querySelectorAll('main.wrap .screen').forEach(s=>s.classList.remove('active'));
     document.getElementById('screen-'+id).classList.add('active');
+    // 'intro'/'entry' are the pre-flow screens (homepage, individual/company
+    // picker) - not part of the step flow itself, so navigating back to
+    // either one (e.g. clicking the logo mid-session) should hide the
+    // stepper again, the same way a fresh page load already does.
+    if(id === 'intro' || id === 'entry'){
+      document.getElementById('clientStepper').style.display = 'none';
+    }
     const idx = STEP_LABELS.findIndex(s=>s.id===id);
     if(idx>-1){
       currentIndex = idx;
