@@ -21,16 +21,22 @@ function fromArr(arr) {
   return JSON.stringify(Array.isArray(arr) ? arr : []);
 }
 
-/** Convert a raw Lawyer row (tags/specs/langs stored as JSON strings) into API shape. */
+/**
+ * Convert a raw Lawyer row (tags/specs/langs stored as JSON strings) into
+ * API shape. barIdStoredPath is the raw disk filename, never sent to any
+ * client (same convention as documents.js's storedPath) - the admin bar-id
+ * download route reads it straight from Prisma, not through this function.
+ */
 function serializeLawyer(l) {
   if (!l) return l;
-  return { ...l, tags: toArr(l.tags), specs: toArr(l.specs), langs: toArr(l.langs) };
+  const { barIdStoredPath, ...rest } = { ...l, tags: toArr(l.tags), specs: toArr(l.specs), langs: toArr(l.langs) };
+  return rest;
 }
 
 /** Same as serializeLawyer, but strips contact details, for public/unauthenticated responses. */
 function serializePublicLawyer(l) {
   if (!l) return l;
-  const { phone, email, rejectionReason, ...rest } = serializeLawyer(l);
+  const { phone, email, rejectionReason, barIdOriginalName, barIdMimeType, ...rest } = serializeLawyer(l);
   return rest;
 }
 

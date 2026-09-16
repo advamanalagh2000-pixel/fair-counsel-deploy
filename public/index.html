@@ -1469,8 +1469,9 @@
       </div>
 
       <div class="field" style="margin-top:14px">
-        <label>Bar ID upload</label>
-        <div class="file-input-fake">Click to upload your Bar Council ID card, or drag file here (PDF/JPG), not yet wired to the backend</div>
+        <label for="lawAppBarId">Bar ID upload (optional)</label>
+        <label class="file-input-fake" for="lawAppBarId" id="lawAppBarIdLabel" style="cursor:pointer;display:block">Click to upload your Bar Council ID card (PDF/JPG/PNG, up to 10MB)</label>
+        <input type="file" id="lawAppBarId" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="onLawAppBarIdChange(this)">
       </div>
 
       <p class="otp-error" id="lawAppError"></p>
@@ -1577,7 +1578,7 @@
             <td><strong style="color:var(--navy)">Adv. Rohan Deshpande</strong></td>
             <td>Property Law · Property, Rent Disputes, Contracts · Pune</td>
             <td class="mono" style="font-size:11.5px;color:#8a8674">2 hrs ago</td>
-            <td><button class="mini-btn" style="border-color:var(--blue);color:var(--blue);background:transparent" onclick="openDocPreview('Adv. Rohan Deshpande')">View documents</button></td>
+            <td><button class="mini-btn" style="border-color:var(--blue);color:var(--blue);background:transparent" onclick="openDocPreview('','Adv. Rohan Deshpande',null)">View documents</button></td>
             <td>
               <div class="admin-actions" style="margin-top:0">
                 <button class="mini-btn approve" onclick="dashDecide(this,'approved','verify')">Approve</button>
@@ -1596,7 +1597,7 @@
             <td><strong style="color:var(--navy)">Adv. Sana Fatima</strong></td>
             <td>Corporate Law · Contracts, Trademark, Compliance · Hyderabad</td>
             <td class="mono" style="font-size:11.5px;color:#8a8674">1 day ago</td>
-            <td><button class="mini-btn" style="border-color:var(--blue);color:var(--blue);background:transparent" onclick="openDocPreview('Adv. Sana Fatima')">View documents</button></td>
+            <td><button class="mini-btn" style="border-color:var(--blue);color:var(--blue);background:transparent" onclick="openDocPreview('','Adv. Sana Fatima',null)">View documents</button></td>
             <td>
               <div class="admin-actions" style="margin-top:0">
                 <button class="mini-btn approve" onclick="dashDecide(this,'approved','verify')">Approve</button>
@@ -1815,13 +1816,7 @@
     <h3 class="serif" id="docModalTitle">Submitted documents</h3>
     <button class="close-x" onclick="closeDocPreview()" aria-label="Close">×</button>
   </div>
-  <div class="admin-body">
-    <p class="revision-note" style="margin-top:0;margin-bottom:14px">Documents submitted for verification. (Prototype placeholders, real files would render or download here.)</p>
-    <div class="doc-thumb-row">
-      <div class="doc-thumb"><div class="doc-icon">📄</div>Bar Council registration certificate.pdf</div>
-      <div class="doc-thumb"><div class="doc-icon">🪪</div>Government ID proof.pdf</div>
-      <div class="doc-thumb"><div class="doc-icon">📋</div>Practice address proof.pdf</div>
-    </div>
+  <div class="admin-body" id="docModalBody">
   </div>
 </div>
 
@@ -3758,7 +3753,7 @@
           <td><strong style="color:var(--navy)">${l.name}</strong></td>
           <td>${l.specs.join(', ')} · ${l.city}</td>
           <td class="mono" style="font-size:11.5px;color:#8a8674">from backend</td>
-          <td><button class="mini-btn" style="border-color:var(--blue);color:var(--blue);background:transparent" onclick="openDocPreview('${l.name}')">View documents</button></td>
+          <td><button class="mini-btn" style="border-color:var(--blue);color:var(--blue);background:transparent" onclick="openDocPreview('${l.id}','${l.name.replace(/'/g,"\\'")}',${l.barIdOriginalName ? `'${l.barIdOriginalName.replace(/'/g,"\\'")}'` : 'null'})">View documents</button></td>
           <td>
             <div class="admin-actions" style="margin-top:0">
               <button class="mini-btn approve" onclick="dashDecide(this,'approved','verify')">Approve</button>
@@ -3963,12 +3958,47 @@
   }
 
   // ============== DOCUMENT PREVIEW ==============
-  function openDocPreview(name){
+  function openDocPreview(id, name, barIdOriginalName){
     document.getElementById('docModalTitle').textContent = 'Documents, ' + name;
+    const body = document.getElementById('docModalBody');
+    if(barIdOriginalName){
+      body.innerHTML = `
+        <p class="revision-note" style="margin-top:0;margin-bottom:14px">Bar ID document submitted with this application.</p>
+        <div class="doc-thumb-row">
+          <div class="doc-thumb" style="cursor:pointer" onclick="viewLawyerBarId('${id}','${barIdOriginalName.replace(/'/g,"\\'")}')">
+            <div class="doc-icon">📄</div>${barIdOriginalName}
+          </div>
+        </div>`;
+    } else {
+      body.innerHTML = `<p class="revision-note" style="margin-top:0">No documents were uploaded with this application.</p>`;
+    }
     openModal('docModal','docOverlay');
   }
   function closeDocPreview(){
     closeModalGeneric('docModal','docOverlay');
+  }
+  // Fetched with the admin's own auth header (this is a Bar ID / identity
+  // document, not public). Downloads via a synthetic anchor click rather
+  // than window.open(blobUrl) - window.open after an await is treated as
+  // not being a direct result of the user's click by most browsers' popup
+  // blockers and gets silently swallowed (confirmed while testing this:
+  // the fetch succeeds but no viewer ever opens, no error either). Same
+  // pattern downloadMyDocument() already uses for case documents.
+  async function viewLawyerBarId(id, filename){
+    try{
+      const res = await fetch(API_BASE + '/admin/lawyers/' + id + '/bar-id', {
+        headers: { Authorization: 'Bearer ' + adminToken }
+      });
+      if(!res.ok) throw new Error('Could not load document');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename || 'bar-id';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    }catch(e){
+      showToast('Could not load that document, is the backend running?');
+    }
   }
 
   // ============== REJECT REASON (inline, required) ==============
@@ -4253,6 +4283,18 @@
     });
   }
 
+  function onLawAppBarIdChange(input){
+    const label = document.getElementById('lawAppBarIdLabel');
+    const file = input.files && input.files[0];
+    if(!file){ label.textContent = 'Click to upload your Bar Council ID card (PDF/JPG/PNG, up to 10MB)'; return; }
+    if(file.size > 10 * 1024 * 1024){
+      label.textContent = 'That file is over 10MB, choose a smaller one.';
+      input.value = '';
+      return;
+    }
+    label.textContent = 'Selected: ' + file.name;
+  }
+
   async function submitLawyerApp(){
     const errEl = document.getElementById('lawAppError');
     errEl.classList.remove('show');
@@ -4265,6 +4307,7 @@
     const langs = document.getElementById('lawAppLangs').value;
     const bio = document.getElementById('lawAppBio').value.trim();
     const email = document.getElementById('lawAppEmail').value.trim();
+    const barIdFile = document.getElementById('lawAppBarId').files[0];
     // Read specs by their canonical English label (via I18N_DICT), not textContent,
     // so this still works correctly if the page is currently showing Hindi.
     const specs = Array.from(document.querySelectorAll('#specChipRow .chip-select.on')).map(btn=>{
@@ -4281,9 +4324,22 @@
 
     if(backendReachable){
       try{
-        const res = await api('/lawyers/apply', { method:'POST', body:{
-          name, phone, email: email || undefined, experienceYears, bar, enrolmentState, city, langs, specs, bio
-        }});
+        let res;
+        if(barIdFile){
+          const fd = new FormData();
+          fd.append('name', name); fd.append('phone', phone);
+          if(email) fd.append('email', email);
+          fd.append('experienceYears', experienceYears); fd.append('bar', bar);
+          fd.append('enrolmentState', enrolmentState); fd.append('city', city);
+          fd.append('langs', langs); fd.append('bio', bio);
+          specs.forEach(s => fd.append('specs', s));
+          fd.append('barId', barIdFile);
+          res = await api('/lawyers/apply', { method:'POST', formData: fd });
+        } else {
+          res = await api('/lawyers/apply', { method:'POST', body:{
+            name, phone, email: email || undefined, experienceYears, bar, enrolmentState, city, langs, specs, bio
+          }});
+        }
         document.getElementById('lawAppRef').textContent = res.id;
       }catch(e){
         errEl.textContent = e.message || 'Could not submit your application.';

@@ -1,5 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const path = require('path');
 const { prisma, serializeLawyer } = require('../prisma');
 const { requireAdmin, requireSuperAdmin } = require('../middleware/auth');
 const { logAudit } = require('../services/auditLog');
@@ -30,6 +31,14 @@ router.post('/lawyers/:id/reject', requireAdmin, async (req, res) => {
   const lawyer = await prisma.lawyer.update({ where: { id: req.params.id }, data: { status: 'rejected', rejectionReason: reason } });
   logAudit('no', `${lawyer.name} rejected by admin "${req.admin.username}" ("${reason}")`);
   res.json(serializeLawyer(lawyer));
+});
+
+/** GET /api/admin/lawyers/:id/bar-id — download the Bar ID document submitted with an application */
+router.get('/lawyers/:id/bar-id', requireAdmin, async (req, res) => {
+  const lawyer = await prisma.lawyer.findUnique({ where: { id: req.params.id } });
+  if (!lawyer || !lawyer.barIdStoredPath) return res.status(404).json({ error: 'No document on file for this lawyer' });
+  const filePath = path.join(__dirname, '..', '..', 'uploads', 'bar-ids', lawyer.barIdStoredPath);
+  res.download(filePath, lawyer.barIdOriginalName || 'bar-id');
 });
 
 /** GET /api/admin/cases?search=&status= */
