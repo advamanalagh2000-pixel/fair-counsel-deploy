@@ -10,7 +10,14 @@ const router = express.Router();
 router.post('/initiate', requireAuth, async (req, res) => {
   const { documentId, aadhaarLast4 } = req.body || {};
   const doc = await prisma.document.findUnique({ where: { id: documentId } });
-  if (!doc || doc.uploadedBy !== req.user.sub) return res.status(404).json({ error: 'Document not found' });
+  if (!doc) return res.status(404).json({ error: 'Document not found' });
+  // eSign is the client signing a document, not necessarily the one who
+  // uploaded it, the normal case is a lawyer's draft (uploadedBy = the
+  // lawyer) that the client then signs, so access is via the case's client,
+  // matching how documents.js already gates who can view an approved draft.
+  const c = await prisma.case.findUnique({ where: { id: doc.caseId } });
+  if (!c || c.clientId !== req.user.sub) return res.status(403).json({ error: 'Only the client on this case can e-sign this document' });
+  if (doc.status !== 'approved') return res.status(400).json({ error: 'This document must be approved before it can be e-signed' });
 
   const result = await initiateEsign({ documentId, aadhaarLast4 });
   await prisma.esignRecord.create({
