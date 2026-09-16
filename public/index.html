@@ -2058,9 +2058,13 @@
     // 'intro'/'entry' are the pre-flow screens (homepage, individual/company
     // picker) - not part of the step flow itself, so navigating back to
     // either one (e.g. clicking the logo mid-session) should hide the
-    // stepper again, the same way a fresh page load already does.
+    // stepper again, the same way a fresh page load already does. Also
+    // hide the lawyer portal bar here - the logo is reachable from inside
+    // the lawyer portal too, and only exitLawyerPortal() cleared it before,
+    // so it stayed stuck on screen if the user left the portal that way.
     if(id === 'intro' || id === 'entry'){
       document.getElementById('clientStepper').style.display = 'none';
+      document.getElementById('lawyerBar').style.display = 'none';
     }
     const idx = STEP_LABELS.findIndex(s=>s.id===id);
     if(idx>-1){
@@ -2129,12 +2133,22 @@
     }
   }
 
+  // The client stepper and the lawyer portal bar must never both be
+  // visible - showing one always hides the other. Without this, e.g.
+  // clicking the logo while inside the lawyer portal (go('intro') doesn't
+  // touch lawyerBar) then re-entering the client flow leaves both bars
+  // stuck on screen at once.
+  function showClientStepper(){
+    document.getElementById('clientStepper').style.display = 'block';
+    document.getElementById('lawyerBar').style.display = 'none';
+  }
+
   // Browsing search and the shortlist doesn't require phone verification —
   // verification is required later, when a client requests an appointment
   // with a specific lawyer (see requireVerification() calls on the
   // "Request Appointment" buttons).
   function enterSearch(){
-    document.getElementById('clientStepper').style.display = 'block';
+    showClientStepper();
     updateTypeBadge();
     saveState();
     go('search');
@@ -2252,7 +2266,7 @@
         loggedIn = true;
         loginName = res.user.name || loginName;
         loginPhone = res.user.phone || loginPhone;
-        document.getElementById('clientStepper').style.display = 'block';
+        showClientStepper();
         document.getElementById('myCasesLink').style.display = 'inline-block';
         saveState();
         showToast('Phone verified, real backend session created.');
@@ -2299,7 +2313,7 @@
     loggedIn = true;
     loginName = document.getElementById('loginName').value || loginName;
     loginPhone = document.getElementById('loginPhone').value || loginPhone;
-    document.getElementById('clientStepper').style.display = 'block';
+    showClientStepper();
     document.getElementById('myCasesLink').style.display = 'inline-block';
     saveState();
     if(pendingVerifyAction){
@@ -4267,8 +4281,7 @@
   function exitLawyerPortal(){
     lawyerToken = null;
     currentLawyerProfile = null;
-    document.getElementById('lawyerBar').style.display = 'none';
-    document.getElementById('clientStepper').style.display = 'block';
+    showClientStepper();
     go('search');
   }
   function goLawyer(id){
