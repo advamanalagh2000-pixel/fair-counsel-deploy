@@ -607,28 +607,9 @@
   <section class="screen active" id="screen-intro">
     <div class="intro-wrap">
       <div class="intro-hero-art">
-        <svg viewBox="0 0 460 130" style="width:100%;max-width:460px;height:auto;">
-          <defs>
-            <radialGradient id="introGlow" cx="50%" cy="50%" r="60%">
-              <stop offset="0%" stop-color="#FFF3E6"/>
-              <stop offset="100%" stop-color="#F5F7F6" stop-opacity="0"/>
-            </radialGradient>
-          </defs>
-          <ellipse cx="230" cy="65" rx="220" ry="60" fill="url(#introGlow)"/>
-          <!-- scales of justice, line-art -->
-          <g stroke="#14467D" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="230" y1="18" x2="230" y2="105"/>
-            <line x1="150" y1="34" x2="310" y2="34"/>
-            <path d="M150 34l-24 44a24 20 0 0 0 48 0z"/>
-            <path d="M310 34l-24 44a24 20 0 0 0 48 0z"/>
-            <line x1="205" y1="112" x2="255" y2="112"/>
-          </g>
-          <circle cx="230" cy="18" r="4.5" fill="#C97C4B"/>
-          <g stroke="#C97C4B" stroke-width="1.6" fill="none" opacity=".55">
-            <path d="M60 100c14-10 30-10 44 0"/>
-            <path d="M356 100c14-10 30-10 44 0"/>
-          </g>
-        </svg>
+        <div class="hero-seal-big">
+          <div class="seal-logo" role="img" aria-label="Fair Counsel logo" style="filter:drop-shadow(0 10px 22px rgba(14,77,74,.18))"></div>
+        </div>
       </div>
       <div class="intro-tag" data-i18n="brandTag">Pan-India Legal Marketplace</div>
       <h1 class="serif" data-i18n="introH1">Legal support that puts you first</h1>
@@ -2941,12 +2922,194 @@
   }
 
   // LEGAL PAGES
+  // Drafted in detail as a starting point - these carry real regulatory
+  // weight (IT Rules 2021, Consumer Protection (E-Commerce) Rules 2020,
+  // DPDP Act 2023) and reference a live payment/document/eSign flow, so a
+  // lawyer/compliance reviewer should sign off before this replaces the
+  // placeholder copy in production. Bracketed items are facts only Fair
+  // Counsel can fill in (entity details, officer name, city of jurisdiction).
+  const LEGAL_H = 'style="color:var(--navy);font-size:13.5px;margin:20px 0 8px;font-family:\'Source Serif 4\',serif"';
+  const LEGAL_P = 'style="margin:0 0 10px"';
+  const LEGAL_UL = 'style="margin:0 0 10px;padding-left:20px"';
   const LEGAL_CONTENT = {
-    terms: {title:'Terms of Service', body:'Fair Counsel is a marketplace connecting clients with independent, verified lawyers. Fair Counsel does not itself provide legal advice or representation, all legal services are rendered by the lawyer you engage. By using Fair Counsel, you agree to our booking, payment, and cancellation terms as set out here. (Full terms would appear in this space.)'},
-    privacy: {title:'Privacy Policy', body:'We collect your name, phone number, and case details to connect you with a lawyer and process payments. Documents you upload are stored securely and shared only with your assigned lawyer and Fair Counsel admin for review. We do not sell your data. (Full policy would appear in this space.)'},
-    refund: {title:'Refund Policy', body:'Consultation fees are refundable if a lawyer fails to show up for a confirmed slot. Advance and final drafting payments are refundable, minus work already completed, if you raise a dispute within 7 days. (Full policy would appear in this space.)'},
-    contact: {title:'Contact Us', body:'Email: support@faircounsel.in<br>Phone: +91 98XXX XXXXX (Mon–Sat, 10am–7pm)<br>For urgent case issues, please raise a ticket from your case tracker instead, it reaches our team faster.'},
-    grievance: {title:'Grievance Officer', body:'In accordance with the IT Rules, 2021 and applicable consumer protection law, the Grievance Officer for Fair Counsel can be reached at:<br><br>Name: [Grievance Officer name] (placeholder)<br>Email: grievance@faircounsel.in<br>Address: Fair Counsel Legal Marketplace Pvt. Ltd., New Delhi, India<br><br>We acknowledge complaints within 24 hours and aim to resolve them within 15 days.'}
+    terms: {title:'Terms of Service', body:`
+      <p ${LEGAL_P}><em>Last updated: [date]</em></p>
+      <p ${LEGAL_P}>These Terms of Service ("Terms") govern your use of the Fair Counsel website and services, operated by Fair Counsel Legal Marketplace Pvt. Ltd. ("Fair Counsel", "we", "us"). By creating an account, browsing lawyer listings, or booking a consultation, you agree to these Terms.</p>
+
+      <h4 ${LEGAL_H}>1. What Fair Counsel is</h4>
+      <p ${LEGAL_P}>Fair Counsel is a technology platform that connects clients with independent, verified lawyers. <strong>Fair Counsel is not a law firm and does not itself provide legal advice, opinions, or representation.</strong> Every consultation, draft, and piece of legal advice is provided by the individual lawyer you engage, acting in their independent professional capacity and bound by their own obligations to the Bar Council of India and applicable state Bar Councils. Fair Counsel's role is limited to verification, matching, scheduling, payment handling, and a quality review of documents before they reach you.</p>
+
+      <h4 ${LEGAL_H}>2. Eligibility</h4>
+      <p ${LEGAL_P}>You must be at least 18 years old and capable of entering a binding contract under the Indian Contract Act, 1872 to use Fair Counsel as a client. Businesses registering under a Company/Business account confirm that the individual completing registration is authorised to bind that entity.</p>
+
+      <h4 ${LEGAL_H}>3. Account and verification</h4>
+      <p ${LEGAL_P}>Client and lawyer accounts are verified via a one-time password (OTP) sent to your mobile number. You are responsible for keeping access to that number secure and for all activity under your account. One phone number may be associated with one client account and, separately, one lawyer account.</p>
+
+      <h4 ${LEGAL_H}>4. Lawyer verification</h4>
+      <p ${LEGAL_P}>Before a lawyer is listed publicly, Fair Counsel reviews their Bar registration number, identity documents, and stated experience. This verification confirms the lawyer is validly enrolled to practice; it is not a guarantee of the outcome, quality, or suitability of the advice they provide for your specific matter. Your engagement for legal work is directly with that lawyer.</p>
+
+      <h4 ${LEGAL_H}>5. How a case moves through the platform</h4>
+      <ul ${LEGAL_UL}>
+        <li><strong>Request a lawyer</strong> — you search or describe your need, and Fair Counsel matches you with a verified lawyer.</li>
+        <li><strong>Consultation</strong> — a paid video or phone consultation of up to 30 minutes, billed at a fixed fee shown before you book.</li>
+        <li><strong>Drafting</strong> — if you choose to proceed, you approve a quoted advance fee before the lawyer begins drafting.</li>
+        <li><strong>Review and delivery</strong> — every draft is checked by the Fair Counsel team before it is released to you, then made available once the final payment is made. One free revision is included per engagement unless stated otherwise.</li>
+      </ul>
+
+      <h4 ${LEGAL_H}>6. Fees and payment</h4>
+      <p ${LEGAL_P}>All fees (consultation, advance, and final) are shown to you before you pay, and nothing is charged automatically at the next stage without your action. Payments are processed through our third-party payment gateway (currently Razorpay); Fair Counsel does not store your full card, UPI, or bank details. A platform fee is deducted from the amount paid out to the lawyer and does not change the price you see as a client.</p>
+
+      <h4 ${LEGAL_H}>7. Cancellations and rescheduling</h4>
+      <p ${LEGAL_P}>Consultations can be rescheduled free of charge up to 24 hours before the booked slot. Consultation fees are fully refundable if you cancel at least 24 hours in advance, or if the lawyer fails to join a confirmed slot. Cancellations within 24 hours of a confirmed consultation may not be eligible for a refund — see our <a href="#" onclick="openLegal('refund');return false;" style="color:var(--navy)">Refund Policy</a> for full detail.</p>
+
+      <h4 ${LEGAL_H}>8. Document review and Aadhaar eSign</h4>
+      <p ${LEGAL_P}>Fair Counsel's review of a lawyer-drafted document checks for completeness and basic quality before release to you; it is not a legal endorsement of its content, and responsibility for the document's substance remains with the drafting lawyer. Where a document is signed via Aadhaar eSign, authentication is performed directly with UIDAI or a licensed eSign service provider with your consent for that specific signature; Fair Counsel does not receive or store your Aadhaar number.</p>
+
+      <h4 ${LEGAL_H}>9. Your responsibilities</h4>
+      <ul ${LEGAL_UL}>
+        <li>Provide accurate information about yourself and your matter.</li>
+        <li>Use the platform only for lawful purposes.</li>
+        <li>Do not upload documents you do not have the right to share.</li>
+        <li>Communicate with lawyers and Fair Counsel staff respectfully.</li>
+      </ul>
+
+      <h4 ${LEGAL_H}>10. Prohibited conduct</h4>
+      <p ${LEGAL_P}>You may not impersonate another person, submit fraudulent identity or Bar documents, attempt to circumvent the platform to avoid fees for a match made through Fair Counsel, harass another user, or use the service to facilitate an unlawful purpose.</p>
+
+      <h4 ${LEGAL_H}>11. Intellectual property</h4>
+      <p ${LEGAL_P}>The Fair Counsel name, logo, and site content belong to Fair Counsel Legal Marketplace Pvt. Ltd. Documents you upload, and drafts prepared for you, remain your property or that of the drafting lawyer as applicable; using the platform does not transfer any rights in them to Fair Counsel.</p>
+
+      <h4 ${LEGAL_H}>12. Limitation of liability</h4>
+      <p ${LEGAL_P}>To the maximum extent permitted by law, Fair Counsel's liability for any claim arising from your use of the platform is limited to the amount of fees paid by you for the specific engagement giving rise to the claim. Fair Counsel is not liable for the professional acts or omissions of any independent lawyer engaged through the platform, which remain that lawyer's individual responsibility.</p>
+
+      <h4 ${LEGAL_H}>13. Governing law and disputes</h4>
+      <p ${LEGAL_P}>These Terms are governed by the laws of India. Subject to the grievance redressal process below, courts at [city] shall have exclusive jurisdiction over any dispute arising from these Terms.</p>
+
+      <h4 ${LEGAL_H}>14. Grievance redressal</h4>
+      <p ${LEGAL_P}>Complaints about content, a specific engagement, or the platform itself can be raised with our <a href="#" onclick="openLegal('grievance');return false;" style="color:var(--navy)">Grievance Officer</a>.</p>
+
+      <h4 ${LEGAL_H}>15. Changes to these Terms</h4>
+      <p ${LEGAL_P}>We may update these Terms from time to time. Material changes will be notified on the platform before they take effect. Continued use after changes take effect constitutes acceptance.</p>
+
+      <h4 ${LEGAL_H}>16. Suspension and termination</h4>
+      <p ${LEGAL_P}>Fair Counsel may suspend or terminate an account that breaches these Terms, engages in fraud, or poses a risk to other users, with notice where reasonably possible.</p>
+
+      <h4 ${LEGAL_H}>17. Contact</h4>
+      <p ${LEGAL_P}>Questions about these Terms can be sent to <strong>legal@faircounsel.in</strong> or via our <a href="#" onclick="openLegal('contact');return false;" style="color:var(--navy)">Contact Us</a> page.</p>
+    `},
+    privacy: {title:'Privacy Policy', body:`
+      <p ${LEGAL_P}><em>Last updated: [date]</em></p>
+      <p ${LEGAL_P}>This Privacy Policy explains what personal data Fair Counsel Legal Marketplace Pvt. Ltd. collects, how we use it, and the choices you have, consistent with India's Digital Personal Data Protection Act, 2023 and applicable IT rules.</p>
+
+      <h4 ${LEGAL_H}>1. Information we collect</h4>
+      <ul ${LEGAL_UL}>
+        <li><strong>Identity and contact details</strong> — name, phone number, email, and, for business accounts, company name and GSTIN.</li>
+        <li><strong>Case details and documents</strong> — the information and files you share to describe your legal matter, and drafts prepared for you.</li>
+        <li><strong>Payment metadata</strong> — amounts, stages, and status of payments. Full card, UPI, or bank account details are handled directly by our payment gateway and are not stored on Fair Counsel's own systems.</li>
+        <li><strong>Usage data</strong> — pages viewed, device/browser type, and similar technical data collected automatically to keep the service working correctly.</li>
+      </ul>
+
+      <h4 ${LEGAL_H}>2. How we use your information</h4>
+      <ul ${LEGAL_UL}>
+        <li>To match you with a suitable, verified lawyer and manage your case through consultation, drafting, and delivery.</li>
+        <li>To process payments and maintain records required for accounting and tax purposes.</li>
+        <li>To send booking confirmations, OTPs, and case updates via WhatsApp, SMS, or email.</li>
+        <li>To review lawyer-drafted documents for quality before they reach you.</li>
+        <li>To investigate misuse, fraud, or breaches of our Terms of Service.</li>
+        <li>To meet legal, regulatory, and law-enforcement obligations.</li>
+      </ul>
+
+      <h4 ${LEGAL_H}>3. Who we share it with</h4>
+      <p ${LEGAL_P}>We share the minimum necessary information with: the lawyer assigned to your case; Fair Counsel staff reviewing documents or handling support; our payment gateway (Razorpay) to process payments; our WhatsApp/SMS delivery providers, solely to send OTPs and case notifications; and a licensed eSign/Aadhaar authentication provider, only at the moment you choose to sign a document, and only with your explicit consent for that signature. <strong>We do not sell your personal data to anyone.</strong></p>
+
+      <h4 ${LEGAL_H}>4. Data storage and security</h4>
+      <p ${LEGAL_P}>Data is stored on secured servers with access limited to personnel who need it to do their job — your assigned lawyer, and Fair Counsel staff directly involved in your case or its review. Documents you upload are only visible to a client once they have passed Fair Counsel's review. We use industry-standard measures to protect data in transit and at rest, though no system can be guaranteed 100% secure.</p>
+
+      <h4 ${LEGAL_H}>5. Data retention</h4>
+      <p ${LEGAL_P}>We retain case and payment records for as long as needed to provide the service and to meet our legal, accounting, and tax obligations (typically up to [7] years after a case closes, unless a longer period is required by law). You may request earlier deletion of data that is not subject to a legal retention requirement, as described below.</p>
+
+      <h4 ${LEGAL_H}>6. Your rights</h4>
+      <p ${LEGAL_P}>You may request access to, correction of, or deletion of your personal data, subject to our legal retention obligations, by writing to <strong>privacy@faircounsel.in</strong>. We will respond within a reasonable time and in any case within the period required by applicable law.</p>
+
+      <h4 ${LEGAL_H}>7. Cookies</h4>
+      <p ${LEGAL_P}>We use essential cookies/local storage to keep you signed in and remember your preferences (such as language). We do not use these for third-party advertising.</p>
+
+      <h4 ${LEGAL_H}>8. Children's privacy</h4>
+      <p ${LEGAL_P}>Fair Counsel is intended for users 18 years and older, consistent with our Terms of Service, and is not directed at children.</p>
+
+      <h4 ${LEGAL_H}>9. Changes to this policy</h4>
+      <p ${LEGAL_P}>We may update this Privacy Policy from time to time. Material changes will be notified on the platform before they take effect.</p>
+
+      <h4 ${LEGAL_H}>10. Contact</h4>
+      <p ${LEGAL_P}>Privacy questions or requests: <strong>privacy@faircounsel.in</strong>. For grievances, see our <a href="#" onclick="openLegal('grievance');return false;" style="color:var(--navy)">Grievance Officer</a> page.</p>
+    `},
+    refund: {title:'Refund Policy', body:`
+      <p ${LEGAL_P}><em>Last updated: [date]</em></p>
+      <p ${LEGAL_P}>Fair Counsel bills in three separate stages — consultation, advance, and final payment — so refund eligibility is assessed per stage, not for the case as a whole.</p>
+
+      <h4 ${LEGAL_H}>1. Consultation fee</h4>
+      <ul ${LEGAL_UL}>
+        <li><strong>Fully refundable</strong> if you cancel or reschedule at least 24 hours before your booked slot, or if the lawyer fails to join a confirmed slot.</li>
+        <li><strong>Not refundable</strong> if you cancel or fail to join within 24 hours of the slot, except where the lawyer also could not attend.</li>
+      </ul>
+
+      <h4 ${LEGAL_H}>2. Advance (drafting) payment</h4>
+      <p ${LEGAL_P}>The advance you pay to begin drafting is refundable, minus the value of any work already completed by the lawyer, if you raise a dispute within 7 days of payment. Disputes raised after 7 days, or once a completed first draft has been delivered to Fair Counsel for review, are assessed case by case.</p>
+
+      <h4 ${LEGAL_H}>3. Final payment</h4>
+      <p ${LEGAL_P}>The final payment unlocks your reviewed, finished document and is generally non-refundable once that document has been delivered. If a final document is not delivered within the timeframe agreed with your lawyer, you are entitled to a full refund of the final payment.</p>
+
+      <h4 ${LEGAL_H}>4. What isn't covered</h4>
+      <ul ${LEGAL_UL}>
+        <li>Change of mind after drafting work has already been completed.</li>
+        <li>Disputes raised outside the applicable window above.</li>
+        <li>Optional add-ons already performed at your request (e.g. e-filing assistance, e-stamping) once completed.</li>
+      </ul>
+
+      <h4 ${LEGAL_H}>5. How to request a refund</h4>
+      <p ${LEGAL_P}>Raise a support ticket from your case tracker, or write to <strong>support@faircounsel.in</strong> with your file number. Most requests are reviewed within 2 business days.</p>
+
+      <h4 ${LEGAL_H}>6. Refund timelines</h4>
+      <p ${LEGAL_P}>Approved refunds are issued to your original payment method within 5–7 business days, though your bank or payment provider may take longer to reflect the credit.</p>
+
+      <h4 ${LEGAL_H}>7. Unresolved disputes</h4>
+      <p ${LEGAL_P}>If you're not satisfied with the outcome of a refund request, you can escalate to our <a href="#" onclick="openLegal('grievance');return false;" style="color:var(--navy)">Grievance Officer</a>.</p>
+    `},
+    contact: {title:'Contact Us', body:`
+      <h4 ${LEGAL_H}>General support</h4>
+      <p ${LEGAL_P}>Email: <strong>support@faircounsel.in</strong><br>Phone: +91 98XXX XXXXX (Mon–Sat, 10am–7pm IST)</p>
+      <p ${LEGAL_P}>For anything tied to an active case (a payment issue, a delayed draft, or a lawyer concern), raising a ticket from your case tracker reaches our team faster than email, since it comes with your file number attached.</p>
+
+      <h4 ${LEGAL_H}>Registered office</h4>
+      <p ${LEGAL_P}>Fair Counsel Legal Marketplace Pvt. Ltd.<br>[registered address]<br>New Delhi, India<br>CIN: U74999XX2026PTC000000 (placeholder)</p>
+
+      <h4 ${LEGAL_H}>Legal and privacy</h4>
+      <p ${LEGAL_P}>Terms questions: legal@faircounsel.in<br>Privacy questions: privacy@faircounsel.in<br>Unresolved complaints: see our <a href="#" onclick="openLegal('grievance');return false;" style="color:var(--navy)">Grievance Officer</a> page.</p>
+
+      <h4 ${LEGAL_H}>Lawyer partnerships</h4>
+      <p ${LEGAL_P}>Interested in joining Fair Counsel as a verified lawyer? <a href="#" onclick="closeLegal();enterLawyerPortal();return false;" style="color:var(--navy)">Apply here</a>.</p>
+    `},
+    grievance: {title:'Grievance Officer', body:`
+      <p ${LEGAL_P}>In accordance with Rule 3(2) of the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021, and applicable consumer protection law, Fair Counsel has appointed a Grievance Officer to address complaints about content, service, or data handling on the platform.</p>
+
+      <h4 ${LEGAL_H}>Grievance Officer</h4>
+      <p ${LEGAL_P}>Name: [Grievance Officer name] (placeholder)<br>Email: <strong>grievance@faircounsel.in</strong><br>Address: Fair Counsel Legal Marketplace Pvt. Ltd., [registered address], New Delhi, India</p>
+
+      <h4 ${LEGAL_H}>What you can report here</h4>
+      <ul ${LEGAL_UL}>
+        <li>A complaint about a specific piece of content or a lawyer listing on the platform.</li>
+        <li>A service complaint that support has not resolved to your satisfaction.</li>
+        <li>A concern about how your personal data has been handled.</li>
+        <li>A suspected fraudulent or unauthorised lawyer profile.</li>
+      </ul>
+      <p ${LEGAL_P}>For a routine case question, payment issue, or booking change, please use <a href="#" onclick="openLegal('contact');return false;" style="color:var(--navy)">Contact Us</a> or your case tracker's support ticket first — it usually gets you a faster answer.</p>
+
+      <h4 ${LEGAL_H}>What to include</h4>
+      <p ${LEGAL_P}>Your name, registered phone number, case file number (if applicable), and a clear description of the issue and the outcome you're seeking.</p>
+
+      <h4 ${LEGAL_H}>Response timelines</h4>
+      <p ${LEGAL_P}>We acknowledge every grievance within 24 hours of receipt and aim to resolve it within 15 days, in line with the IT Rules, 2021. Complaints involving suspected unlawful content may be actioned sooner where required by law.</p>
+    `}
   };
   function openLegal(key){
     const c = LEGAL_CONTENT[key];
