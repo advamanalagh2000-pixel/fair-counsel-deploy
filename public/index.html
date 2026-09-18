@@ -399,7 +399,21 @@
 
   /* WHATSAPP */
   .wa-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#25945a;background:#E7F5EE;padding:3px 9px;border-radius:10px;font-weight:600;}
-  .wa-float{position:fixed;bottom:22px;right:22px;width:52px;height:52px;border-radius:50%;background:#25945a;color:white;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 4px 14px rgba(0,0,0,.2);cursor:pointer;z-index:70;border:none;}
+  .chat-float-wrap{position:fixed;bottom:22px;right:22px;z-index:70;}
+  .wa-float{width:52px;height:52px;border-radius:50%;background:#25945a;color:white;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 4px 14px rgba(0,0,0,.2);cursor:pointer;border:none;}
+  .chat-popup{position:absolute;bottom:64px;right:0;width:320px;max-width:calc(100vw - 44px);background:var(--white);border:1px solid var(--line);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.16);display:none;overflow:hidden;}
+  .chat-popup.open{display:block;}
+  .chat-popup-head{background:var(--navy);color:var(--white);padding:14px 16px;display:flex;align-items:center;gap:10px;}
+  .chat-popup-avatar{width:34px;height:34px;border-radius:50%;background:#25945a;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+  .chat-popup-title{font-size:13.5px;font-weight:600;}
+  .chat-popup-sub{font-size:11px;color:#c9d6e6;}
+  .chat-popup-head .close-x{margin-left:auto;color:var(--white);}
+  .chat-popup-body{padding:16px;}
+  .chat-bubble{background:var(--paper-2);border-radius:10px;border-top-left-radius:2px;padding:11px 13px;font-size:12.5px;line-height:1.55;color:#3a3a3a;margin-bottom:14px;}
+  .chat-options{display:flex;flex-direction:column;gap:8px;}
+  .chat-opt{display:flex;align-items:center;gap:9px;text-align:left;padding:10px 12px;border:1px solid var(--line);border-radius:7px;background:var(--white);font-size:12.5px;color:#2a2a2a;cursor:pointer;font-family:inherit;}
+  .chat-opt:hover{border-color:var(--navy);background:var(--paper-2);}
+  .chat-opt-icon{font-size:15px;flex-shrink:0;}
   .channel-pick{display:flex;gap:8px;margin-top:6px;}
   .channel-opt{flex:1;padding:9px;border:1px solid var(--line);border-radius:2px;background:var(--white);font-size:12px;text-align:center;cursor:pointer;color:#4a4a52;}
   .channel-opt.on{background:var(--navy);color:white;border-color:var(--navy);}
@@ -1945,7 +1959,28 @@
   </div>
 </div>
 
-<button class="wa-float" onclick="openTicket()" title="Chat with Fair Counsel support on WhatsApp">💬</button>
+<div class="chat-float-wrap">
+  <div class="chat-popup" id="chatPopup" role="dialog" aria-label="Fair Counsel Assist">
+    <div class="chat-popup-head">
+      <div class="chat-popup-avatar" aria-hidden="true">💬</div>
+      <div>
+        <div class="chat-popup-title">Fair Counsel Assist</div>
+        <div class="chat-popup-sub">Usually replies in a few minutes</div>
+      </div>
+      <button class="close-x" onclick="closeChatPopup()" aria-label="Close">×</button>
+    </div>
+    <div class="chat-popup-body">
+      <div class="chat-bubble">Hi, I'm Fair Counsel Assist 👋<br>What can I help you with today?</div>
+      <div class="chat-options">
+        <button class="chat-opt" onclick="closeChatPopup();enterSearch();"><span class="chat-opt-icon">🔍</span>Find the right lawyer</button>
+        <button class="chat-opt" onclick="closeChatPopup();go('freequestion');"><span class="chat-opt-icon">❓</span>Ask a quick legal question</button>
+        <button class="chat-opt" onclick="closeChatPopup();goMyCases();"><span class="chat-opt-icon">📁</span>Check my case status</button>
+        <button class="chat-opt" onclick="closeChatPopup();openTicket();"><span class="chat-opt-icon">🎫</span>Raise a support ticket</button>
+      </div>
+    </div>
+  </div>
+  <button class="wa-float" id="chatFloatBtn" onclick="toggleChatPopup()" aria-haspopup="true" aria-expanded="false" title="Chat with Fair Counsel Assist">💬</button>
+</div>
 
 <script>
   // ============== BACKEND CONNECTION ==============
@@ -2417,6 +2452,16 @@
     document.getElementById('notifDot').style.display = 'none';
     notifRead = true;
     saveState();
+  }
+
+  // FAIR COUNSEL ASSIST (floating chat launcher)
+  function toggleChatPopup(){
+    const isOpen = document.getElementById('chatPopup').classList.toggle('open');
+    document.getElementById('chatFloatBtn').setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  }
+  function closeChatPopup(){
+    document.getElementById('chatPopup').classList.remove('open');
+    document.getElementById('chatFloatBtn').setAttribute('aria-expanded', 'false');
   }
 
   // ============== GENERIC MODAL (a11y: focus trap + ESC + focus restore) ==============
