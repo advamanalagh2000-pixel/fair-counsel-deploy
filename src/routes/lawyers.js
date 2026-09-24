@@ -5,7 +5,7 @@ const fs = require('fs');
 const { v4: uuid } = require('uuid');
 const { prisma, serializeLawyer, serializePublicLawyer, fromArr, toArr } = require('../prisma');
 const { requireLawyer } = require('../middleware/auth');
-const { applyLimiter } = require('../middleware/rateLimit');
+const { applyLimiter, matchLimiter } = require('../middleware/rateLimit');
 const { logAudit } = require('../services/auditLog');
 
 const router = express.Router();
@@ -25,6 +25,66 @@ const barIdUpload = multer({
   fileFilter: (req, file, cb) => {
     const ok = ['application/pdf', 'image/jpeg', 'image/png'].includes(file.mimetype);
     cb(ok ? null : new Error('Bar ID must be a PDF or JPG/PNG image'), ok);
+  }
+});
+
+// Keyword-based matching for "describe it in your words" - not an AI model,
+// just substring matching against common phrasing for each specialisation,
+// but it's real (searches the actual lawyer roster) rather than the fixed
+// "Matrimonial Law in Jaipur, 3 lawyers" response every query used to get
+// regardless of what was actually typed.
+const MATCH_SPEC_KEYWORDS = {
+  'Family Law': ['divorce', 'matrimonial', 'custody', 'alimony', 'maintenance', 'marriage', 'domestic violence', 'child support'],
+  'Criminal Law': ['criminal', 'fir', 'bail', 'arrest', 'police complaint', 'cheque bounce', 'theft', 'assault', '138'],
+  'Real Estate & Property Law': ['rent', 'rental', 'property', 'landlord', 'tenant', 'lease', 'eviction', 'possession'],
+  'Infrastructure & Construction Law': ['construction', 'builder', 'contractor dispute', 'infrastructure'],
+  'Employment & Labour Law': ['employment', 'labour', 'labor', 'termination', 'wrongful termination', 'workplace harassment', 'salary dispute'],
+  'Consumer Protection Law': ['consumer', 'refund', 'defective product', 'service deficiency', 'warranty claim'],
+  'Taxation Law': ['tax notice', 'income tax', 'gst notice', 'tax dispute'],
+  'Intellectual Property Rights (IPR)': ['trademark', 'copyright', 'patent', 'intellectual property'],
+  'Contract Law': ['breach of contract', 'contract dispute', 'agreement breach'],
+  'Motor Accident Claims': ['motor accident', 'vehicle accident', 'accident claim', 'insurance claim'],
+  'Corporate & Commercial Law': ['company registration', 'startup', 'incorporation', 'business dispute', 'partnership dispute'],
+  'Banking & Finance Law': ['loan default', 'bank dispute', 'recovery notice', 'finance dispute']
+};
+const MATCH_CITIES = ['Delhi', 'Jaipur', 'Mumbai', 'Bengaluru', 'Pune', 'Hyderabad'];
+
+/** POST /api/lawyers/match  { text } — keyword-matches free text to a specialisation/city, returns real lawyers */
+router.post('/match', matchLimiter, async (req, res) => {
+  try {
+    const { text } = req.body || {};
+    if (!text || !text.trim()) return res.status(400).json({ error: 'Describe your situation first' });
+    const lower = text.toLowerCase();
+
+    let matchedSpec = null;
+    for (const [spec, keywords] of Object.entries(MATCH_SPEC_KEYWORDS)) {
+      if (keywords.some(k => lower.includes(k))) { matchedSpec = spec; break; }
+    }
+    const matchedCity = MATCH_CITIES.find(c => lower.includes(c.toLowerCase())) || null;
+
+    const where = { status: 'verified' };
+    if (matchedSpec) where.specs = { contains: `"${matchedSpec}"` };
+    if (matchedCity) where.city = matchedCity;
+
+    let results = await prisma.lawyer.findMany({ where });
+    let fellBack = false;
+    if (results.length === 0 && (matchedSpec || matchedCity)) {
+      // We recognised something in the text but don't have a lawyer for that
+      // exact combination yet - show the general roster instead of a dead end.
+      results = await prisma.lawyer.findMany({ where: { status: 'verified' } });
+      fellBack = true;
+    }
+
+    res.json({
+      matchedSpec,
+      matchedCity,
+      fellBack,
+      count: results.length,
+      results: results.slice(0, 3).map(serializePublicLawyer)
+    });
+  } catch (err) {
+    console.error('POST /api/lawyers/match failed:', err);
+    res.status(500).json({ error: 'Could not match you to a lawyer right now' });
   }
 });
 

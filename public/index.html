@@ -966,9 +966,11 @@
       <div class="chat-body" id="chatBody">
         <div class="bubble user" id="chatUserMsg"></div>
         <div class="typing" id="chatTyping" data-i18n="chatTyping">Fair Counsel Assist is reading your case...</div>
+        <div class="bubble" id="chatErrorMsg" style="display:none;background:#F3E4E4;color:var(--brick);align-self:flex-start;border-top-left-radius:0"></div>
       </div>
     </div>
-    <div class="confid-notice" id="confidNotice" style="max-width:640px;margin:14px auto 0;display:none">
+    <p style="max-width:640px;margin:10px auto 0;font-size:11px;color:#8a8674;text-align:center" data-i18n="assistPrivacyNote">This is keyword-based matching, not an AI reading your case. What you type is used only to suggest a specialisation and city, and to prefill your case file if you continue — it isn't used to train any model, and isn't shown to other clients or lawyers.</p>
+    <div class="confid-notice" id="confidNotice" style="max-width:640px;margin:10px auto 0;display:none">
       <span style="font-size:16px">🔒</span>
       <div data-i18n="sensitiveNotice"><strong>This looks like a sensitive matter.</strong> Details you share here are visible only to your assigned lawyer and the Fair Counsel reviewer who checks drafts before they reach you, never to other clients or lawyers on the platform.</div>
     </div>
@@ -2828,6 +2830,7 @@
     step4p: { en: `Download your finished document. One free revision included, ready to execute.`, hi: `अपना तैयार दस्तावेज़ डाउनलोड करें। एक मुफ़्त संशोधन शामिल है, लागू करने के लिए तैयार।` },
     chatAssist: { en: `Fair Counsel Assist`, hi: `फेयर काउंसल असिस्ट` },
     chatTyping: { en: `Fair Counsel Assist is reading your case...`, hi: `फेयर काउंसल असिस्ट आपका मामला पढ़ रहा है...` },
+    assistPrivacyNote: { en: `This is keyword-based matching, not an AI reading your case. What you type is used only to suggest a specialisation and city, and to prefill your case file if you continue — it isn't used to train any model, and isn't shown to other clients or lawyers.`, hi: `यह कीवर्ड-आधारित मिलान है, कोई AI आपका मामला नहीं पढ़ रहा। आपके टाइप किए गए शब्दों का उपयोग केवल विशेषज्ञता और शहर सुझाने के लिए होता है, और अगर आप आगे बढ़ते हैं तो आपकी केस फ़ाइल पहले से भरने के लिए — इसका उपयोग किसी मॉडल को प्रशिक्षित करने के लिए नहीं होता, और यह अन्य ग्राहकों या वकीलों को नहीं दिखाया जाता।` },
     sensitiveNotice: { en: `<strong>This looks like a sensitive matter.</strong> Details you share here are visible only to your assigned lawyer and the Fair Counsel reviewer who checks drafts before they reach you, never to other clients or lawyers on the platform.`, hi: `<strong>यह एक संवेदनशील मामला लगता है।</strong> यहाँ साझा किए गए विवरण केवल आपके नियुक्त वकील और फेयर काउंसल के समीक्षक को दिखाई देते हैं, जो आप तक पहुँचने से पहले ड्राफ्ट जांचते हैं, प्लेटफ़ॉर्म के अन्य ग्राहकों या वकीलों को कभी नहीं।`, html:true },
     shortlistH2: { en: `Matching lawyers`, hi: `मिलते-जुलते वकील` },
     shortlistSub: { en: `These lawyers specialise in what you need. Request one. Fair Counsel reviews every request before it's confirmed.`, hi: `ये वकील आपकी ज़रूरत में विशेषज्ञ हैं। किसी एक का अनुरोध करें। फेयर काउंसल पुष्टि से पहले हर अनुरोध की समीक्षा करता है।` },
@@ -3270,28 +3273,76 @@
     document.getElementById('freeQResult').style.display = 'none';
   }
 
-  function runChat(){
-    const val = document.getElementById('freeInput').value || 'Jaipur, matrimonial matter, need mutual consent divorce paperwork';
+  // Real keyword matching against the actual lawyer roster (POST /lawyers/match),
+  // not the fixed "Matrimonial Law in Jaipur" response every query used to
+  // get regardless of what was typed. 8s timeout with a friendly fallback,
+  // since this is a real network call now, not a canned setTimeout.
+  async function runChat(){
+    const val = document.getElementById('freeInput').value.trim() || 'Jaipur, matrimonial matter, need mutual consent divorce paperwork';
     document.getElementById('chatUserMsg').textContent = val;
     document.getElementById('chatTyping').style.display = 'block';
+    document.getElementById('chatErrorMsg').style.display = 'none';
     const body = document.getElementById('chatBody');
     document.querySelectorAll('.bubble.bot, .btn-continue-chat').forEach(e=>e.remove());
     const sensitive = /matrimonial|divorce|criminal|custody|domestic/i.test(val);
     document.getElementById('confidNotice').style.display = sensitive ? 'flex' : 'none';
-    setTimeout(()=>{
+
+    let data;
+    try{
+      const controller = new AbortController();
+      const timeout = setTimeout(()=>controller.abort(), 8000);
+      const res = await fetch(API_BASE + '/lawyers/match', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: val }), signal: controller.signal
+      });
+      clearTimeout(timeout);
+      if(!res.ok){ const d = await res.json().catch(()=>({})); throw new Error(d.error || 'Match failed'); }
+      data = await res.json();
+    }catch(e){
       document.getElementById('chatTyping').style.display = 'none';
-      const b = document.createElement('div');
-      b.className = 'bubble bot';
-      b.innerHTML = `That sounds like a <strong>Matrimonial Law</strong> matter in <strong>Jaipur</strong>, specifically mutual consent divorce drafting. I've found 3 verified lawyers who handle this regularly. Want to see them?`;
-      body.appendChild(b);
+      const errEl = document.getElementById('chatErrorMsg');
+      errEl.textContent = e.name === 'AbortError'
+        ? "This is taking longer than expected. You can search with filters instead, it's just as fast."
+        : "Couldn't match your case right now. You can search with filters instead.";
+      errEl.style.display = 'block';
       const btn = document.createElement('button');
-      btn.className = 'btn btn-primary btn-continue-chat';
+      btn.className = 'btn btn-ghost btn-continue-chat';
       btn.style.marginTop = '4px';
       btn.style.alignSelf = 'flex-start';
-      btn.textContent = 'See matching lawyers';
-      btn.onclick = ()=> go('shortlist', true);
+      btn.textContent = 'Search by filters instead';
+      btn.onclick = ()=> go('search');
       body.appendChild(btn);
-    }, 1100);
+      return;
+    }
+
+    document.getElementById('chatTyping').style.display = 'none';
+    const b = document.createElement('div');
+    b.className = 'bubble bot';
+    const specPart = data.matchedSpec ? `a <strong>${data.matchedSpec}</strong> matter` : 'a legal matter';
+    const cityPart = data.matchedCity ? ` in <strong>${data.matchedCity}</strong>` : '';
+    const countLine = data.fellBack
+      ? `We don't have a specialist in that exact area yet, so here's our full verified roster (${data.count}).`
+      : `I've found ${data.count} verified lawyer${data.count===1?'':'s'} who handle${data.count===1?'s':''} this.`;
+    b.innerHTML = `That sounds like ${specPart}${cityPart}. ${countLine} Want to see them?`;
+    body.appendChild(b);
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-primary btn-continue-chat';
+    btn.style.marginTop = '4px';
+    btn.style.alignSelf = 'flex-start';
+    btn.textContent = 'See matching lawyers';
+    btn.onclick = ()=> {
+      // fellBack means /match already gave up on the exact spec/city and
+      // returned the general roster instead - re-applying those same
+      // strict filters here would show zero results on the shortlist
+      // screen's own fetch, contradicting the message we just showed.
+      activeFilters = data.fellBack
+        ? { spec: 'Any', city: 'Any', lang: 'Any', exp: 'Any' }
+        : { spec: data.matchedSpec || 'Any', city: data.matchedCity || 'Any', lang: 'Any', exp: 'Any' };
+      currentPage = 1;
+      saveState();
+      go('shortlist', true);
+    };
+    body.appendChild(btn);
   }
 
   const LAWYERS = [

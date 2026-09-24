@@ -37,4 +37,10 @@ const applyLimiter = makeLimiter({
   message: 'Too many applications submitted from this device, please wait a while before trying again.'
 });
 
-module.exports = { otpSendLimiter, loginLimiter, applyLimiter };
+const matchLimiter = makeLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: 'Too many requests from this device, please wait a while before trying again.'
+});
+
+module.exports = { otpSendLimiter, loginLimiter, applyLimiter, matchLimiter };
