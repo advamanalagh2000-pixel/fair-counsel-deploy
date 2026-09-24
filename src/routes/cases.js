@@ -2,6 +2,7 @@ const express = require('express');
 const { prisma } = require('../prisma');
 const { requireAuth } = require('../middleware/auth');
 const { logAudit } = require('../services/auditLog');
+const { notify } = require('../services/notifications');
 
 const router = express.Router();
 
@@ -85,6 +86,11 @@ router.post('/:id/review', requireAuth, async (req, res) => {
       data: { caseId: c.id, lawyerId: c.lawyerId, clientId: req.user.sub, rating, comment }
     });
     logAudit('info', `New review (${rating}★) for case ${c.fileCode}`);
+    await notify({
+      recipientRole: 'lawyer', recipientId: c.lawyerId, type: 'review', caseId: c.id,
+      title: `New ${rating}★ review`,
+      body: comment || `You received a ${rating}-star review for FILE ${c.fileCode}.`
+    });
     res.status(201).json(review);
   } catch (err) {
     console.error('POST /api/cases/:id/review failed:', err);
@@ -111,6 +117,13 @@ router.post('/:id/messages', requireAuth, async (req, res) => {
 
     const message = await prisma.message.create({
       data: { caseId: c.id, senderRole: req.user.role, senderId: req.user.sub, body }
+    });
+    const recipientRole = req.user.role === 'user' ? 'lawyer' : 'user';
+    const recipientId = req.user.role === 'user' ? c.lawyerId : c.clientId;
+    await notify({
+      recipientRole, recipientId, type: 'message', caseId: c.id,
+      title: `New message on FILE ${c.fileCode}`,
+      body: body.slice(0, 120)
     });
     res.status(201).json(message);
   } catch (err) {

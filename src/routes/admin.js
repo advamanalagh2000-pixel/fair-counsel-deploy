@@ -6,6 +6,7 @@ const { prisma, serializeLawyer } = require('../prisma');
 const { requireAdmin, requireSuperAdmin } = require('../middleware/auth');
 const { logAudit } = require('../services/auditLog');
 const { generateTotpSecret, generateTotpUri, verifyTotpCode } = require('../services/totp');
+const { notify } = require('../services/notifications');
 
 const router = express.Router();
 
@@ -21,6 +22,11 @@ router.post('/lawyers/:id/approve', requireAdmin, async (req, res) => {
   if (!existing) return res.status(404).json({ error: 'Not found' });
   const lawyer = await prisma.lawyer.update({ where: { id: req.params.id }, data: { status: 'verified' } });
   logAudit('ok', `${lawyer.name} approved by admin "${req.admin.username}"`);
+  await notify({
+    recipientRole: 'lawyer', recipientId: lawyer.id, type: 'verification',
+    title: 'Your application was approved',
+    body: "You're now verified on Fair Counsel and visible in client search results."
+  });
   res.json(serializeLawyer(lawyer));
 });
 
@@ -32,6 +38,11 @@ router.post('/lawyers/:id/reject', requireAdmin, async (req, res) => {
   if (!existing) return res.status(404).json({ error: 'Not found' });
   const lawyer = await prisma.lawyer.update({ where: { id: req.params.id }, data: { status: 'rejected', rejectionReason: reason } });
   logAudit('no', `${lawyer.name} rejected by admin "${req.admin.username}" ("${reason}")`);
+  await notify({
+    recipientRole: 'lawyer', recipientId: lawyer.id, type: 'verification',
+    title: 'Your application was not approved',
+    body: reason
+  });
   res.json(serializeLawyer(lawyer));
 });
 
@@ -102,6 +113,13 @@ router.post('/documents/:id/approve', requireAdmin, async (req, res) => {
   });
   const c = await prisma.case.findUnique({ where: { id: doc.caseId } });
   logAudit('ok', `Draft "${doc.originalName}" approved and released to client for case ${c ? c.fileCode : doc.caseId}, by admin "${req.admin.username}"`);
+  if (c) {
+    await notify({
+      recipientRole: 'user', recipientId: c.clientId, type: 'draft', caseId: c.id,
+      title: `A document is ready for FILE ${c.fileCode}`,
+      body: `"${doc.originalName}" has been reviewed and is ready to download.`
+    });
+  }
   res.json(updated);
 });
 
@@ -117,6 +135,13 @@ router.post('/documents/:id/reject', requireAdmin, async (req, res) => {
   });
   const c = await prisma.case.findUnique({ where: { id: doc.caseId } });
   logAudit('no', `Draft "${doc.originalName}" sent back to lawyer for case ${c ? c.fileCode : doc.caseId} by admin "${req.admin.username}" ("${reason}")`);
+  if (c) {
+    await notify({
+      recipientRole: 'lawyer', recipientId: c.lawyerId, type: 'draft', caseId: c.id,
+      title: `Draft sent back for FILE ${c.fileCode}`,
+      body: reason
+    });
+  }
   res.json(updated);
 });
 

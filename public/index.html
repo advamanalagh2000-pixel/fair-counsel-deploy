@@ -2398,6 +2398,7 @@
         showClientStepper();
         document.getElementById('myCasesLink').style.display = 'inline-block';
         saveState();
+        refreshNotifDot();
         showToast('Phone verified, real backend session created.');
         if(pendingVerifyAction){
           const fn = pendingVerifyAction;
@@ -2722,13 +2723,57 @@
     }
   }
 
-  // NOTIFICATIONS
-  function toggleNotif(){
-    const isOpen = document.getElementById('notifDrop').classList.toggle('open');
+  // NOTIFICATIONS - real, backend-driven, scoped to whichever identity (client
+  // or lawyer) is currently active. lawyerToken is only ever set while in the
+  // lawyer portal (exitLawyerPortal clears it), so it alone disambiguates.
+  function hasNotifIdentity(){ return !!(lawyerToken || (loggedIn && authToken)); }
+  function notifApiToken(){ return lawyerToken || undefined; }
+
+  const NOTIF_ICON = { message: '💬', review: '★', verification: '✅', draft: '📄', payment: '💳' };
+  function timeAgo(iso){
+    const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+    if(s < 60) return 'just now';
+    if(s < 3600) return Math.floor(s/60) + 'm ago';
+    if(s < 86400) return Math.floor(s/3600) + 'h ago';
+    return Math.floor(s/86400) + 'd ago';
+  }
+  async function refreshNotifDot(){
+    if(!hasNotifIdentity()){
+      document.getElementById('notifDot').style.display = 'none';
+      return;
+    }
+    try{
+      const data = await api('/notifications', { token: notifApiToken() });
+      document.getElementById('notifDot').style.display = data.unreadCount > 0 ? 'block' : 'none';
+    }catch(e){ /* offline or logged out mid-poll, dot just stays as-is */ }
+  }
+  async function toggleNotif(){
+    const drop = document.getElementById('notifDrop');
+    const isOpen = drop.classList.toggle('open');
     document.getElementById('notifBtn').setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-    document.getElementById('notifDot').style.display = 'none';
-    notifRead = true;
-    saveState();
+    if(!isOpen) return;
+    if(!hasNotifIdentity()){
+      drop.innerHTML = '<div class="notif-item notif-empty">Log in to see your notifications.</div>';
+      return;
+    }
+    drop.innerHTML = '<div class="notif-item notif-empty">Loading…</div>';
+    try{
+      const data = await api('/notifications', { token: notifApiToken() });
+      drop.innerHTML = data.notifications.length === 0
+        ? '<div class="notif-item notif-empty">No notifications yet.</div>'
+        : data.notifications.map(n => `
+          <div class="notif-item">
+            <strong>${NOTIF_ICON[n.type] || '🔔'} ${n.title.replace(/</g,'&lt;')}</strong>
+            ${n.body ? `<div style="margin-top:2px">${n.body.replace(/</g,'&lt;')}</div>` : ''}
+            <div style="margin-top:4px;font-size:11px;color:#8a8674">${timeAgo(n.createdAt)}</div>
+          </div>`).join('');
+      if(data.unreadCount > 0){
+        await api('/notifications/read-all', { method:'POST', token: notifApiToken() });
+        document.getElementById('notifDot').style.display = 'none';
+      }
+    }catch(e){
+      drop.innerHTML = `<div class="notif-item notif-empty">Couldn't load notifications: ${e.message || 'unknown error'}</div>`;
+    }
   }
 
   // FAIR COUNSEL ASSIST (floating chat launcher)
@@ -2806,7 +2851,7 @@
       const state = {
         clientType, companyPlan, selectedPlan, loginName, loginPhone,
         currentLang, activeFilters, sortBy, currentPage,
-        preferredChannel, notifRead,
+        preferredChannel,
         removedVerifyNames, removedDraftNames,
         adminAuditLog, ticketSubjects,
         lawyerApplied
@@ -2829,7 +2874,6 @@
       sortBy = s.sortBy || 'recommended';
       currentPage = s.currentPage || 1;
       preferredChannel = s.preferredChannel || 'WhatsApp';
-      notifRead = !!s.notifRead;
       removedVerifyNames = s.removedVerifyNames || [];
       removedDraftNames = s.removedDraftNames || [];
       adminAuditLog = s.adminAuditLog || [];
@@ -2852,7 +2896,6 @@
       document.getElementById('myCasesLink').style.display = 'inline-block';
     }
     if(currentLang === 'HI'){ currentLang = 'EN'; toggleLang(); } // reapply translations via existing toggle
-    if(notifRead) document.getElementById('notifDot').style.display = 'none';
     // remove previously-decided admin rows so state survives a refresh
     removedVerifyNames.forEach(name=>{
       const row = document.querySelector(`#dashVerifyRows tr[data-name="${CSS.escape(name)}"]`);
@@ -3683,7 +3726,6 @@
   let sortBy = 'recommended';
   let currentPage = 1;
   const PAGE_SIZE = 4;
-  let notifRead = true; // no real notification backend yet, nothing new to flag by default
   let removedVerifyNames = [];
   let removedDraftNames = [];
   let adminAuditLog = [];
@@ -4297,6 +4339,7 @@
       errEl.classList.remove('show');
       closeLawyerGate();
       goLawyer('dashboard');
+      refreshNotifDot();
       showToast('Signed in, this is a real backend session tied to your verified lawyer profile.');
     }catch(e){
       boxes.forEach(b=>{ b.classList.add('err'); b.value=''; });
@@ -5028,6 +5071,7 @@
     currentLawyerProfile = null;
     showClientStepper();
     go('search');
+    refreshNotifDot();
   }
   function goLawyer(id){
     if(id === 'dashboard' && !lawyerToken){
@@ -5264,6 +5308,7 @@
   loadHomeStats();
   applyLoadedStateToUI();
   autoAssociateLabels();
+  setInterval(refreshNotifDot, 45000); // real unread check, only does anything once someone's actually logged in
 </script>
 
 </body>

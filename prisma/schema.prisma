@@ -203,6 +203,20 @@ model AuditLog {
   createdAt DateTime @default(now())
 }
 
+model Notification {
+  id            String   @id @default(uuid())
+  recipientRole String // user | lawyer
+  recipientId   String // User.id or Lawyer.id, matching recipientRole - same polymorphic-id convention as Document.uploadedBy
+  type          String // message | review | verification | draft | payment
+  title         String
+  body          String   @default("")
+  caseId        String?
+  read          Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([recipientRole, recipientId, read])
+}
+
 model Payout {
   id               String   @id @default(uuid())
   lawyerId         String

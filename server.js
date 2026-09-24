@@ -120,6 +120,7 @@ app.use('/api/lawyers', require('./src/routes/lawyers'));
 app.use('/api/cases', require('./src/routes/cases'));
 app.use('/api/payments', require('./src/routes/payments'));
 app.use('/api/documents', require('./src/routes/documents'));
+app.use('/api/notifications', require('./src/routes/notifications'));
 app.use('/api/esign', require('./src/routes/esign'));
 app.use('/api/support', require('./src/routes/support'));
 app.use('/api/admin', require('./src/routes/admin'));
@@ -151,11 +152,11 @@ const PORT = process.env.PORT || 4000;
  * `prisma migrate deploy` runs through a separate schema-engine binary (not
  * the query engine PRISMA_QUERY_ENGINE_LIBRARY controls above), which has
  * the same musl/OpenSSL incompatibility on this host and can't be fixed the
- * same way. Rather than chase that binary too, this repo ships a pre-built,
- * pre-migrated, pre-seeded SQLite file (prisma/prisma/prod.db) directly in
- * git, rebuilt locally after every schema change. If that file is already
- * there, skip migrate deploy entirely instead of letting it fail on every
- * boot for no benefit.
+ * same way. Rather than chase that binary too, the deploy repo ships a
+ * pre-built, pre-migrated, pre-seeded SQLite file (prisma/prisma/prod.db)
+ * directly in git, rebuilt locally after every schema change. If that file
+ * is already there, skip migrate deploy entirely instead of letting it fail
+ * on every boot for no benefit.
  */
 async function start() {
   const dbFile = (process.env.DATABASE_URL || '').replace(/^file:/, '');

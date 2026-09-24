@@ -4,6 +4,7 @@ const { prisma } = require('../prisma');
 const { requireAuth } = require('../middleware/auth');
 const { createOrder, verifyPaymentSignature, verifyWebhookSignature, MOCK_MODE } = require('../services/paymentProvider');
 const { logAudit } = require('../services/auditLog');
+const { notify } = require('../services/notifications');
 
 const router = express.Router();
 
@@ -74,6 +75,11 @@ router.post('/confirm', requireAuth, async (req, res) => {
     });
 
     logAudit('ok', `Payment ${paymentId} confirmed (${payment.stage}) for case ${c.fileCode}`);
+    await notify({
+      recipientRole: 'lawyer', recipientId: c.lawyerId, type: 'payment', caseId: c.id,
+      title: `Payment received for FILE ${c.fileCode}`,
+      body: `${payment.stage[0].toUpperCase()}${payment.stage.slice(1)} payment of ₹${(payment.amountPaise / 100).toLocaleString('en-IN')} confirmed.`
+    });
   } else {
     logAudit('ok', `Payment ${paymentId} confirmed (${payment.stage})`);
   }
