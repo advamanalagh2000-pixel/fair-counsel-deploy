@@ -42,7 +42,11 @@ router.get('/mine', requireAuth, async (req, res) => {
     const cases = await prisma.case.findMany({ where: { lawyerId: req.user.sub }, orderBy: { createdAt: 'desc' } });
     return res.json(cases);
   }
-  const cases = await prisma.case.findMany({ where: { clientId: req.user.sub }, orderBy: { createdAt: 'desc' } });
+  const cases = await prisma.case.findMany({
+    where: { clientId: req.user.sub },
+    orderBy: { createdAt: 'desc' },
+    include: { review: true, lawyer: { select: { name: true } } }
+  });
   res.json(cases);
 });
 
@@ -58,6 +62,34 @@ router.get('/:id', requireAuth, async (req, res) => {
   const c = await prisma.case.findUnique({ where: { id: req.params.id } });
   if (!canViewCase(req.user, c)) return res.status(404).json({ error: 'Not found' });
   res.json(c);
+});
+
+/** POST /api/cases/:id/review  { rating, comment } — client only, case must be closed, one review per case */
+router.post('/:id/review', requireAuth, async (req, res) => {
+  try {
+    if (req.user.role !== 'user') return res.status(403).json({ error: 'Only clients can leave a review' });
+    const c = await prisma.case.findUnique({ where: { id: req.params.id } });
+    if (!c || c.clientId !== req.user.sub) return res.status(404).json({ error: 'Not found' });
+    if (c.status !== 'closed') return res.status(400).json({ error: 'You can review a case once it is closed' });
+
+    const existing = await prisma.review.findUnique({ where: { caseId: c.id } });
+    if (existing) return res.status(409).json({ error: 'You already reviewed this case' });
+
+    const rating = parseInt(req.body?.rating, 10);
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be a whole number from 1 to 5' });
+    }
+    const comment = String(req.body?.comment || '').trim().slice(0, 1000);
+
+    const review = await prisma.review.create({
+      data: { caseId: c.id, lawyerId: c.lawyerId, clientId: req.user.sub, rating, comment }
+    });
+    logAudit('info', `New review (${rating}★) for case ${c.fileCode}`);
+    res.status(201).json(review);
+  } catch (err) {
+    console.error('POST /api/cases/:id/review failed:', err);
+    res.status(500).json({ error: 'Could not save your review right now' });
+  }
 });
 
 module.exports = router;

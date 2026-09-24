@@ -12,6 +12,20 @@ const router = express.Router();
 
 function feeValue(l) { return l.feePaise || 0; }
 
+/** Merges { avgRating, reviewCount } onto each lawyer from a single groupBy query, no fake defaults. */
+async function attachRatings(lawyerList) {
+  const ids = lawyerList.map(l => l.id);
+  if (ids.length === 0) return lawyerList;
+  const groups = await prisma.review.groupBy({
+    by: ['lawyerId'],
+    where: { lawyerId: { in: ids } },
+    _avg: { rating: true },
+    _count: { rating: true }
+  });
+  const byId = new Map(groups.map(g => [g.lawyerId, { avgRating: Math.round(g._avg.rating * 10) / 10, reviewCount: g._count.rating }]));
+  return lawyerList.map(l => ({ ...l, avgRating: byId.get(l.id)?.avgRating ?? null, reviewCount: byId.get(l.id)?.reviewCount ?? 0 }));
+}
+
 // Bar ID uploads live in their own subdirectory, kept separate from case
 // documents (documents.js) since they belong to an applicant, not a case.
 const BAR_ID_UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads', 'bar-ids');
@@ -75,12 +89,13 @@ router.post('/match', matchLimiter, async (req, res) => {
       fellBack = true;
     }
 
+    const topResults = await attachRatings(results.slice(0, 3).map(serializePublicLawyer));
     res.json({
       matchedSpec,
       matchedCity,
       fellBack,
       count: results.length,
-      results: results.slice(0, 3).map(serializePublicLawyer)
+      results: topResults
     });
   } catch (err) {
     console.error('POST /api/lawyers/match failed:', err);
@@ -113,7 +128,7 @@ router.get('/', async (req, res) => {
     const size = Math.max(1, parseInt(pageSize, 10) || 4);
     const total = results.length;
     const start = (p - 1) * size;
-    const pageResults = results.slice(start, start + size);
+    const pageResults = await attachRatings(results.slice(start, start + size));
 
     res.json({ total, page: p, pageSize: size, totalPages: Math.max(1, Math.ceil(total / size)), results: pageResults });
   } catch (err) {
@@ -215,7 +230,37 @@ router.put('/me/availability', requireLawyer, async (req, res) => {
 router.get('/:id', async (req, res) => {
   const lawyer = await prisma.lawyer.findUnique({ where: { id: req.params.id } });
   if (!lawyer) return res.status(404).json({ error: 'Not found' });
-  res.json(serializePublicLawyer(lawyer));
+  const [withRating] = await attachRatings([serializePublicLawyer(lawyer)]);
+  res.json(withRating);
+});
+
+/** GET /api/lawyers/:id/reviews — public list of client reviews for a lawyer, most recent first */
+router.get('/:id/reviews', async (req, res) => {
+  try {
+    const [reviews, agg] = await Promise.all([
+      prisma.review.findMany({
+        where: { lawyerId: req.params.id },
+        orderBy: { createdAt: 'desc' },
+        include: { client: { select: { name: true } } }
+      }),
+      prisma.review.aggregate({ where: { lawyerId: req.params.id }, _avg: { rating: true }, _count: { rating: true } })
+    ]);
+    res.json({
+      avgRating: agg._count.rating ? Math.round(agg._avg.rating * 10) / 10 : null,
+      reviewCount: agg._count.rating,
+      // First name only - a client's full name shouldn't be exposed on a public lawyer profile.
+      reviews: reviews.map(r => ({
+        id: r.id,
+        rating: r.rating,
+        comment: r.comment,
+        createdAt: r.createdAt,
+        clientName: (r.client?.name || '').trim().split(/\s+/)[0] || 'Client'
+      }))
+    });
+  } catch (err) {
+    console.error('GET /api/lawyers/:id/reviews failed:', err);
+    res.status(500).json({ error: 'Could not load reviews right now' });
+  }
 });
 
 module.exports = router;

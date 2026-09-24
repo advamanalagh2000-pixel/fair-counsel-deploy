@@ -90,6 +90,31 @@ app.use((req, res, next) => {
 
 app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 
+/**
+ * Real counts for the homepage trust strip. Nothing here is a marketing
+ * placeholder: avgRating/reviewCount come straight from the Review table,
+ * and are null/0 rather than a made-up number until real reviews exist.
+ */
+app.get('/api/stats', async (req, res) => {
+  try {
+    const { prisma } = require('./src/prisma');
+    const [verifiedLawyers, closedCases, ratingAgg] = await Promise.all([
+      prisma.lawyer.count({ where: { status: 'verified' } }),
+      prisma.case.count({ where: { status: 'closed' } }),
+      prisma.review.aggregate({ _avg: { rating: true }, _count: { rating: true } })
+    ]);
+    res.json({
+      verifiedLawyers,
+      closedCases,
+      avgRating: ratingAgg._count.rating ? Math.round(ratingAgg._avg.rating * 10) / 10 : null,
+      reviewCount: ratingAgg._count.rating
+    });
+  } catch (err) {
+    console.error('GET /api/stats failed:', err);
+    res.status(500).json({ error: 'Could not load stats right now' });
+  }
+});
+
 app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/lawyers', require('./src/routes/lawyers'));
 app.use('/api/cases', require('./src/routes/cases'));

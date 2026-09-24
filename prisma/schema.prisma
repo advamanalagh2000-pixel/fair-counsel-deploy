@@ -33,6 +33,7 @@ model User {
 
   cases          Case[]
   supportTickets SupportTicket[]
+  reviews        Review[]
 }
 
 model Otp {
@@ -89,6 +90,7 @@ model Lawyer {
 
   cases   Case[]
   payouts Payout[]
+  reviews Review[]
 }
 
 model Case {
@@ -110,8 +112,24 @@ model Case {
   documents      Document[]
   payouts        Payout[]
   supportTickets SupportTicket[]
+  review         Review?
 
   @@index([clientId])
+  @@index([lawyerId])
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  caseId    String   @unique
+  case      Case     @relation(fields: [caseId], references: [id])
+  lawyerId  String
+  lawyer    Lawyer   @relation(fields: [lawyerId], references: [id])
+  clientId  String
+  client    User     @relation(fields: [clientId], references: [id])
+  rating    Int // 1-5, one review per closed case
+  comment   String   @default("")
+  createdAt DateTime @default(now())
+
   @@index([lawyerId])
 }
 

@@ -937,11 +937,9 @@
     </div>
 
     <div class="trust-strip">
-      <div class="trust-stat"><div class="trust-num">520+</div><div class="trust-label" data-i18n="trust1">Verified lawyers</div></div>
-      <div class="trust-stat"><div class="trust-num">18</div><div class="trust-label" data-i18n="trust2">States covered</div></div>
-      <div class="trust-stat"><div class="trust-num">4.7 <span class="mono" style="font-size:13px">★</span></div><div class="trust-label" data-i18n="trust3">Average client rating</div></div>
-      <div class="trust-stat"><div class="trust-num">2,300+</div><div class="trust-label" data-i18n="trust4">Cases closed</div></div>
-      <div class="trust-stat"><div class="trust-num" style="color:var(--sage)">&lt; 2 hrs</div><div class="trust-label" data-i18n="trust5">Average lawyer response time</div></div>
+      <div class="trust-stat"><div class="trust-num" id="statVerifiedLawyers">—</div><div class="trust-label" data-i18n="trust1">Verified lawyers</div></div>
+      <div class="trust-stat" id="statRatingWrap" style="display:none"><div class="trust-num" id="statRating"></div><div class="trust-label" data-i18n="trust3">Average client rating</div></div>
+      <div class="trust-stat"><div class="trust-num" id="statCasesClosed">—</div><div class="trust-label" data-i18n="trust4">Cases closed</div></div>
     </div>
 
     <div class="howit">
@@ -1969,6 +1967,25 @@
   </div>
 </div>
 
+<!-- REVIEW MODAL -->
+<div class="overlay-bg" id="reviewOverlay" onclick="closeReviewModal()"></div>
+<div class="admin-panel" id="reviewModal">
+  <div class="admin-head">
+    <h3 class="serif">Rate your lawyer</h3>
+    <button class="close-x" onclick="closeReviewModal()">×</button>
+  </div>
+  <div class="admin-body">
+    <p class="revision-note" style="margin-top:0">How was your experience with <strong id="reviewLawyerName"></strong> on <span id="reviewFileCode"></span>?</p>
+    <div id="reviewStars" style="font-size:30px;letter-spacing:6px;text-align:center;margin:16px 0"></div>
+    <div class="field">
+      <label for="reviewComment">Comment (optional)</label>
+      <textarea id="reviewComment" rows="3" placeholder="What went well, or what could be better?"></textarea>
+    </div>
+    <p class="revision-note" id="reviewError" style="color:var(--brick);display:none"></p>
+    <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="submitReview()">Submit review</button>
+  </div>
+</div>
+
 <!-- RESCHEDULE / CANCEL MODAL -->
 <div class="overlay-bg" id="reschedOverlay" onclick="closeReschedule()"></div>
 <div class="admin-panel" id="reschedModal">
@@ -2084,6 +2101,26 @@
     }
     const banner = document.getElementById('backendOfflineBanner');
     if(banner) banner.style.display = backendReachable ? 'none' : 'block';
+  }
+
+  // Real homepage trust-strip numbers from /api/stats - left as "—" (not a
+  // fake number) if the backend is unreachable or nothing has happened yet.
+  async function loadHomeStats(){
+    try{
+      const res = await fetch(API_BASE + '/stats');
+      if(!res.ok) return;
+      const s = await res.json();
+      const lawyersEl = document.getElementById('statVerifiedLawyers');
+      const casesEl = document.getElementById('statCasesClosed');
+      if(lawyersEl) lawyersEl.textContent = s.verifiedLawyers + '+';
+      if(casesEl) casesEl.textContent = s.closedCases > 0 ? s.closedCases + '+' : s.closedCases;
+      if(s.reviewCount > 0){
+        const wrap = document.getElementById('statRatingWrap');
+        const ratingEl = document.getElementById('statRating');
+        if(ratingEl) ratingEl.innerHTML = `${s.avgRating.toFixed(1)} <span class="mono" style="font-size:13px">★</span>`;
+        if(wrap) wrap.style.display = '';
+      }
+    }catch(e){ /* stats are a nice-to-have, never block the homepage on them */ }
   }
 
   const STEP_LABELS = [
@@ -2491,14 +2528,72 @@
       list.innerHTML = cases.map(c=>{
         const meta = MY_CASE_STATUS_LABEL[c.status] || { label: c.status, cls: 'status-wait' };
         const pillStyle = meta.closedStyle ? ' style="background:var(--sage-l);color:var(--sage)"' : '';
+        const lawyerName = c.lawyer?.name || '';
+        let reviewBit = '';
+        if(c.status === 'closed'){
+          reviewBit = c.review
+            ? `<span class="mono" style="font-size:12px;color:var(--brass)" title="Your rating">${'★'.repeat(c.review.rating)}${'☆'.repeat(5-c.review.rating)}</span>`
+            : `<button class="btn btn-ghost" style="padding:8px 14px;font-size:12.5px" onclick="openReviewModal('${c.id}','${lawyerName.replace(/'/g,"\\'")}','${c.fileCode}')">Rate this lawyer</button>`;
+        }
         return `
         <div class="mycase-row">
-          <div><div class="req-row-title">FILE ${c.fileCode}, ${c.category}</div><div class="req-row-sub">Stage: ${c.stage}</div></div>
-          <div style="display:flex;gap:8px;align-items:center"><span class="status-pill ${meta.cls}"${pillStyle}>${meta.label}</span><button class="btn btn-ghost" style="padding:8px 14px;font-size:12.5px" onclick="go('tracker')">View</button></div>
+          <div><div class="req-row-title">FILE ${c.fileCode}, ${c.category}</div><div class="req-row-sub">${lawyerName ? `With ${lawyerName} · ` : ''}Stage: ${c.stage}</div></div>
+          <div style="display:flex;gap:8px;align-items:center">${reviewBit}<span class="status-pill ${meta.cls}"${pillStyle}>${meta.label}</span><button class="btn btn-ghost" style="padding:8px 14px;font-size:12.5px" onclick="go('tracker')">View</button></div>
         </div>`;
       }).join('');
     }catch(e){
       list.innerHTML = `<div class="dash-empty">Couldn't load your cases: ${e.message || 'unknown error'}</div>`;
+    }
+  }
+
+  // ============== CASE REVIEW (rate a lawyer after a closed case) ==============
+  let reviewCaseId = null;
+  let reviewRating = 0;
+  function openReviewModal(caseId, lawyerName, fileCode){
+    reviewCaseId = caseId;
+    reviewRating = 0;
+    document.getElementById('reviewLawyerName').textContent = lawyerName || 'your lawyer';
+    document.getElementById('reviewFileCode').textContent = fileCode;
+    document.getElementById('reviewComment').value = '';
+    document.getElementById('reviewError').style.display = 'none';
+    renderReviewStars();
+    openModal('reviewModal','reviewOverlay');
+  }
+  function closeReviewModal(){
+    closeModalGeneric('reviewModal','reviewOverlay');
+  }
+  function renderReviewStars(){
+    const el = document.getElementById('reviewStars');
+    el.innerHTML = '';
+    for(let i=1;i<=5;i++){
+      const s = document.createElement('span');
+      s.textContent = i <= reviewRating ? '★' : '☆';
+      s.style.cssText = `cursor:pointer;color:${i <= reviewRating ? 'var(--brass)' : '#ccc'}`;
+      s.setAttribute('role','button');
+      s.setAttribute('aria-label', `${i} star${i===1?'':'s'}`);
+      s.onclick = () => { reviewRating = i; renderReviewStars(); };
+      el.appendChild(s);
+    }
+  }
+  async function submitReview(){
+    const errEl = document.getElementById('reviewError');
+    errEl.style.display = 'none';
+    if(reviewRating < 1){
+      errEl.textContent = 'Pick a star rating first.';
+      errEl.style.display = 'block';
+      return;
+    }
+    try{
+      await api(`/cases/${reviewCaseId}/review`, {
+        method:'POST',
+        body:{ rating: reviewRating, comment: document.getElementById('reviewComment').value.trim() }
+      });
+      closeReviewModal();
+      showToast('Thanks, your review was saved.');
+      loadMyCases();
+    }catch(e){
+      errEl.textContent = e.message || 'Could not save your review right now.';
+      errEl.style.display = 'block';
     }
   }
 
@@ -2900,10 +2995,8 @@
     chip11: { en: `Contract Law`, hi: `अनुबंध विधि` },
     chip12: { en: `Information Technology & Cyber Law`, hi: `सूचना प्रौद्योगिकी एवं साइबर विधि` },
     trust1: { en: `Verified lawyers`, hi: `सत्यापित वकील` },
-    trust2: { en: `States covered`, hi: `राज्यों में उपलब्ध` },
     trust3: { en: `Average client rating`, hi: `औसत ग्राहक रेटिंग` },
     trust4: { en: `Cases closed`, hi: `पूर्ण हुए मामले` },
-    trust5: { en: `Average lawyer response time`, hi: `औसत वकील प्रतिक्रिया समय` },
     freeQTeaserTitle: { en: `Not sure where to start?`, hi: `पता नहीं कहाँ से शुरू करें?` },
     freeQTeaserBody: { en: `Ask a free legal question, no payment, no case opened, just a quick pointer.`, hi: `एक मुफ़्त कानूनी सवाल पूछें, कोई भुगतान नहीं, कोई मामला नहीं खुलता, बस एक त्वरित मार्गदर्शन।` },
     freeQTeaserBtn: { en: `Ask for free →`, hi: `मुफ़्त में पूछें →` },
@@ -3611,7 +3704,8 @@
         exp: l.experienceYears, expYears: l.experienceYears, badge: l.badge,
         consultCount: l.consultationsCompleted,
         fee: inrFromPaise(l.feePaise) + ' / 30 min',
-        bio: l.bio || '', turnaround: l.turnaround || '', starting: l.starting || '', bar: l.bar
+        bio: l.bio || '', turnaround: l.turnaround || '', starting: l.starting || '', bar: l.bar,
+        avgRating: l.avgRating, reviewCount: l.reviewCount
       }))
     };
   }
@@ -3691,6 +3785,10 @@
       // so show the Verified badge on everyone and layer Client's fave on
       // top where it applies, rather than making them mutually exclusive.
       const faveBadge = l.badge==='fave' ? `<span class="badge badge-fave">${tr('clientsFave')}</span>` : '';
+      // No fake starting rating - only show a rating line once real reviews exist for this lawyer.
+      const ratingLine = l.reviewCount > 0
+        ? `<div class="lawyer-meta" style="color:var(--brass)">★ ${l.avgRating.toFixed(1)} <span style="color:#8a8674">(${l.reviewCount} review${l.reviewCount===1?'':'s'})</span></div>`
+        : '';
       card.innerHTML = `
         <div class="avatar" aria-hidden="true">${l.init}</div>
         <div class="lawyer-info">
@@ -3702,6 +3800,7 @@
           <div class="tag-row">${l.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
           <div class="lawyer-meta">${metaLine}</div>
           <div class="lawyer-meta" style="color:#3F7D5C">${countLine}</div>
+          ${ratingLine}
           <button class="more-toggle" id="moreBtn${i}" onclick="toggleDetail(${i})" aria-expanded="false">${tr('showMoreDetails')}</button>
           <dl class="lawyer-detail" id="detail${i}">
             <dt>${tr('aboutLabel')}</dt><dd>${l.bio}</dd>
@@ -5083,6 +5182,7 @@
   loadState();
   renderStepper();
   checkBackend().then(renderLawyers);
+  loadHomeStats();
   applyLoadedStateToUI();
   autoAssociateLabels();
 </script>
