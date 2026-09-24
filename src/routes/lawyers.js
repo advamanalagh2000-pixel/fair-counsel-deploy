@@ -80,6 +80,7 @@ router.post('/apply', applyLimiter, barIdUpload.single('barId'), async (req, res
     if (!phone || !/^\d{10}$/.test(phone)) return res.status(400).json({ error: 'Provide a valid 10-digit phone number' });
     if (!bar || !bar.trim()) return res.status(400).json({ error: 'Bar registration number is required' });
     if (specs.length === 0) return res.status(400).json({ error: 'Pick at least one specialisation' });
+    if (!req.file) return res.status(400).json({ error: 'A Bar ID upload is required to apply' });
 
     const existing = await prisma.lawyer.findUnique({ where: { phone } });
     if (existing) return res.status(409).json({ error: 'An application already exists for this phone number' });

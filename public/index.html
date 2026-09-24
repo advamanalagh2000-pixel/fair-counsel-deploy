@@ -1461,7 +1461,7 @@
       </div>
 
       <div class="field" style="margin-top:14px">
-        <label for="lawAppBarId">Bar ID upload (optional)</label>
+        <label for="lawAppBarId">Bar ID upload (required)</label>
         <label class="file-input-fake" for="lawAppBarId" id="lawAppBarIdLabel" style="cursor:pointer;display:block">Click to upload your Bar Council ID card (PDF/JPG/PNG, up to 10MB)</label>
         <input type="file" id="lawAppBarId" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="onLawAppBarIdChange(this)">
       </div>
@@ -4563,6 +4563,12 @@
     if(!name || !phone || !bar || specs.length === 0){
       errEl.textContent = 'Full name, mobile number, bar registration number, and at least one specialisation are required.';
       errEl.classList.add('show');
+      return;
+    }
+    if(!barIdFile){
+      errEl.textContent = 'A Bar ID upload is required — this is how we verify you before listing you publicly.';
+      errEl.classList.add('show');
+      document.getElementById('lawAppBarIdLabel').scrollIntoView({behavior:'smooth', block:'center'});
       return;
     }
 
