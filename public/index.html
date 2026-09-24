@@ -761,6 +761,8 @@
           </div>
           <p style="font-size:11.5px;color:#6b6858;margin:6px 0 0" data-i18n="otpChannelNote">Your one-time verification code will also be sent this way (Email isn't used for OTPs; WhatsApp is used instead).</p>
         </div>
+        <label style="font-size:11.5px;color:#6b6858;display:flex;align-items:flex-start;gap:7px;margin-bottom:14px"><input type="checkbox" id="dataConsentCheck" style="margin-top:2px"> <span>I agree to Fair Counsel collecting and processing my phone number, name, and case details as described in the <a href="#" onclick="openLegal('privacy');return false;" style="color:var(--navy)">Privacy Policy</a>, to connect me with a lawyer and process my case.</span></label>
+        <p class="otp-error" id="consentError">Please confirm you agree before we can send your OTP.</p>
         <button class="btn btn-primary btn-block" onclick="sendOtp()" data-i18n="sendOtpBtn">Send OTP</button>
       </div>
 
@@ -1068,12 +1070,12 @@
         <button class="dur-btn on" onclick="setDur(this,30)" data-i18n="dur30">30 min</button>
       </div>
 
-      <label style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:#8a8674;display:block;margin-top:18px" data-i18n="availSlots">Available slots, Thu, 13 Aug</label>
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:#8a8674;display:block;margin-top:18px" data-i18n="availSlots">Available slots, Thu, 13 Aug (IST)</label>
       <div class="cal-grid">
-        <div class="slot">10:00 AM</div>
-        <div class="slot on">11:30 AM</div>
-        <div class="slot">2:00 PM</div>
-        <div class="slot">4:30 PM</div>
+        <div class="slot">10:00 AM IST</div>
+        <div class="slot on">11:30 AM IST</div>
+        <div class="slot">2:00 PM IST</div>
+        <div class="slot">4:30 PM IST</div>
       </div>
 
       <div class="field" style="margin-top:16px">
@@ -1366,6 +1368,7 @@
     <div class="card" style="max-width:640px;margin:0 auto">
       <h2 class="section-title serif">Apply to join Fair Counsel</h2>
       <p class="section-sub">Submit your details for verification. Every application is reviewed manually before approval.</p>
+      <div class="gate-note">Fair Counsel takes a 15% platform fee on the consultation, advance, and final payments clients pay you through the platform — you keep the rest, paid out per case. There's no separate signup or listing fee.</div>
 
       <div class="field-row">
         <div class="field"><label for="lawAppName">Full name</label><input type="text" id="lawAppName" placeholder="Adv. Rohan Deshpande"></div>
@@ -1389,7 +1392,8 @@
       </div>
 
       <div class="field" style="margin-top:12px">
-        <label>Top 3 specialisations</label>
+        <label for="specSearchInput">Top 3 specialisations</label>
+        <input type="text" id="specSearchInput" placeholder="Search specialisations, e.g. tax, criminal, IP" style="margin-top:8px" oninput="filterSpecChips(this.value)">
         <div class="chip-row" id="specChipRow" style="margin-top:8px">
           <button type="button" class="chip-select" onclick="toggleSpec(this)" data-i18n="spec_corporate___commercial_law">Corporate &amp; Commercial Law</button>
           <button type="button" class="chip-select" onclick="toggleSpec(this)" data-i18n="spec_mergers___acquisitions__m_a">Mergers &amp; Acquisitions (M&amp;A)</button>
@@ -1464,6 +1468,7 @@
         <label for="lawAppBarId">Bar ID upload (required)</label>
         <label class="file-input-fake" for="lawAppBarId" id="lawAppBarIdLabel" style="cursor:pointer;display:block">Click to upload your Bar Council ID card (PDF/JPG/PNG, up to 10MB)</label>
         <input type="file" id="lawAppBarId" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="onLawAppBarIdChange(this)">
+        <p style="font-size:11px;color:#6b6858;margin:6px 0 0">Used only to verify your Bar registration before listing you publicly. Visible to Fair Counsel's verification team, not shown to clients. See our <a href="#" onclick="openLegal('privacy');return false;" style="color:var(--navy)">Privacy Policy</a>.</p>
       </div>
 
       <p class="otp-error" id="lawAppError"></p>
@@ -2190,6 +2195,13 @@
   let otpBackendMode = false; // true once we know the backend is handling this OTP
 
   async function sendOtp(){
+    const consentBox = document.getElementById('dataConsentCheck');
+    if(consentBox && !consentBox.checked){
+      document.getElementById('consentError').classList.add('show');
+      consentBox.focus();
+      return;
+    }
+    document.getElementById('consentError').classList.remove('show');
     const phoneRaw = document.getElementById('loginPhone').value || '';
     const phone = phoneRaw.replace(/\D/g,'') || '9812345678';
     const otpChannel = preferredChannel === 'SMS' ? 'sms' : 'whatsapp'; // WhatsApp default; Email isn't a valid OTP channel so it also falls back to WhatsApp
@@ -2834,7 +2846,7 @@
     chooseDuration: { en: `Choose duration`, hi: `अवधि चुनें` },
     dur15: { en: `15 min`, hi: `15 मिनट` },
     dur30: { en: `30 min`, hi: `30 मिनट` },
-    availSlots: { en: `Available slots, Thu, 13 Aug`, hi: `उपलब्ध समय, गुरुवार, 13 अगस्त` },
+    availSlots: { en: `Available slots, Thu, 13 Aug (IST)`, hi: `उपलब्ध समय, गुरुवार, 13 अगस्त (IST)` },
     suggestTime: { en: `Or suggest a time that works better for you`, hi: `या अपने लिए बेहतर समय सुझाएं` },
     suggestTimePh: { en: `e.g. Friday after 6 PM`, hi: `जैसे शुक्रवार शाम 6 बजे के बाद` },
     continueToFee: { en: `Continue to consultation fee`, hi: `परामर्श शुल्क पर जारी रखें` },
@@ -3471,13 +3483,18 @@
       const consultCount = l.consultCount !== undefined ? l.consultCount : (parseInt(l.count) || 0);
       const metaLine = `${expYears} ${tr('yrsExperience')} · ${l.city} · ${l.langs.join(', ')}`;
       const countLine = `${consultCount} ${tr('consultationsCompleted')}`;
-      const badgeLabel = l.badge==='fave' ? tr('clientsFave') : tr('verifiedBadge');
+      // Every lawyer in results is verified (that's the search filter itself) -
+      // "fave" is an additional distinction on top of that, not a replacement,
+      // so show the Verified badge on everyone and layer Client's fave on
+      // top where it applies, rather than making them mutually exclusive.
+      const faveBadge = l.badge==='fave' ? `<span class="badge badge-fave">${tr('clientsFave')}</span>` : '';
       card.innerHTML = `
         <div class="avatar" aria-hidden="true">${l.init}</div>
         <div class="lawyer-info">
           <div class="lawyer-name-row">
             <span class="lawyer-name">${l.name}</span>
-            <span class="badge ${l.badge==='fave'?'badge-fave':'badge-verified'}">${badgeLabel}</span>
+            <span class="badge badge-verified">${tr('verifiedBadge')}</span>
+            ${faveBadge}
           </div>
           <div class="tag-row">${l.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
           <div class="lawyer-meta">${metaLine}</div>
@@ -4524,6 +4541,17 @@
     document.getElementById('specCounter').textContent = selectedSpecs + ' of 3 selected';
     document.querySelectorAll('#specChipRow .chip-select').forEach(c=>{
       if(!c.classList.contains('on')) c.disabled = selectedSpecs>=3;
+    });
+  }
+
+  // ~65 specialisation chips are hard to scan unfiltered, so let a lawyer
+  // search them by name. Selected chips always stay visible even if they no
+  // longer match the search text, so filtering never hides an existing pick.
+  function filterSpecChips(query){
+    const q = query.trim().toLowerCase();
+    document.querySelectorAll('#specChipRow .chip-select').forEach(c=>{
+      const matches = !q || c.textContent.toLowerCase().includes(q) || c.classList.contains('on');
+      c.style.display = matches ? '' : 'none';
     });
   }
 

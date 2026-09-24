@@ -101,34 +101,35 @@ async function sendSms(phone, code) {
 
 /**
  * Send an OTP over the requested channel ('whatsapp' | 'sms'), defaulting to
- * WhatsApp. Falls back to SMS if WhatsApp send fails for any reason (no
- * provider configured, or a real send error), and finally to test mode if
- * neither channel has a provider configured.
+ * WhatsApp. Tries the requested channel first, then falls back to whichever
+ * other channel actually has a provider configured, and only lands in test
+ * mode if neither does. The fallback matters in practice: this deployment
+ * only has WHATSAPP_PROVIDER set, not SMS_PROVIDER, so a client who
+ * explicitly picks "SMS" would otherwise silently land in test mode - which
+ * is invisible in production (devOtp is only echoed when NODE_ENV !==
+ * 'production') - and just wait forever for a text that was never sent,
+ * with no indication anything went wrong. Falling back to WhatsApp instead
+ * means they actually get a working OTP, and the response's `channel`
+ * field (which the frontend displays) honestly reflects what was used.
  */
 async function sendOtp(phone, code, channel = 'whatsapp') {
-  const tryWhatsApp = channel !== 'sms';
+  const preferred = channel === 'sms'
+    ? [['sms', SMS_PROVIDER, sendSms], ['whatsapp', WHATSAPP_PROVIDER, sendWhatsApp]]
+    : [['whatsapp', WHATSAPP_PROVIDER, sendWhatsApp], ['sms', SMS_PROVIDER, sendSms]];
 
-  if (tryWhatsApp && WHATSAPP_PROVIDER) {
+  for (const [label, configured, send] of preferred) {
+    if (!configured) continue;
     try {
-      await sendWhatsApp(phone, code);
-      return { delivered: true, testMode: false, channel: 'whatsapp' };
+      await send(phone, code);
+      return { delivered: true, testMode: false, channel: label };
     } catch (err) {
-      console.warn(`[otp] WhatsApp send failed (${err.message}), falling back to SMS`);
-    }
-  }
-
-  if (SMS_PROVIDER) {
-    try {
-      await sendSms(phone, code);
-      return { delivered: true, testMode: false, channel: 'sms' };
-    } catch (err) {
-      console.warn(`[otp] SMS send failed (${err.message}), falling back to test mode`);
+      console.warn(`[otp] ${label} send failed (${err.message}), trying next channel`);
     }
   }
 
   // TEST MODE, no real delivery on either channel.
   console.log(`[otp:test-mode] Code for ${phone} is ${code} (not actually sent, set WHATSAPP_PROVIDER or SMS_PROVIDER in .env for real delivery)`);
-  return { delivered: false, testMode: true, channel: tryWhatsApp ? 'whatsapp' : 'sms' };
+  return { delivered: false, testMode: true, channel };
 }
 
 module.exports = { sendOtp, WHATSAPP_PROVIDER, SMS_PROVIDER };
