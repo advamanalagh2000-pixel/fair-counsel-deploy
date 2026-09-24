@@ -1096,6 +1096,7 @@
       <div class="filecode" id="fileCodePayment">FILE FC/2026/00142</div>
       <h2 class="section-title serif" style="margin-top:8px" data-i18n="payH2">Payment, three stages</h2>
       <p class="section-sub" data-i18n="paySub">You only pay for what's confirmed. Nothing is billed automatically at the next stage.</p>
+      <p style="font-size:11px;color:#8a8674;margin-top:-8px;margin-bottom:14px">All amounts shown include GST. A full tax invoice is available for download after your final payment.</p>
 
       <div class="ledger">
         <div class="ledger-row">
@@ -1178,6 +1179,7 @@
       <div class="filecode">FILE FC/2026/00142</div>
       <h2 class="section-title serif" style="margin-top:8px" data-i18n="quoteH2">Quotation from Adv. Kulkarni</h2>
       <p class="section-sub" data-i18n="quoteSub">Based on your consultation, here's what the drafting will cost. Nothing is charged until you accept.</p>
+      <p style="font-size:11px;color:#8a8674;margin-top:-8px;margin-bottom:14px">Amounts shown include GST.</p>
 
       <div class="mode-tabs">
         <button class="mode-tab on" id="qTabReview" onclick="setQuoteTab('review')" data-i18n="qTabReview">1. Review quote</button>
@@ -3269,10 +3271,29 @@
   }
 
   // GST INVOICE
-  function downloadInvoice(){
+  async function downloadInvoice(){
     const btn = document.getElementById('gstBtn');
-    btn.textContent = 'Invoice ready, LB-INV-2026-0142 ✓';
+    if(!lastFinalPaymentId){ showToast('Complete the final payment first to get your invoice.'); return; }
+    const originalText = btn.textContent;
+    btn.textContent = 'Preparing invoice…';
     btn.disabled = true;
+    try{
+      const res = await fetch(API_BASE + '/payments/' + lastFinalPaymentId + '/invoice', {
+        headers: { Authorization: 'Bearer ' + authToken }
+      });
+      if(!res.ok) throw new Error('Invoice download failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'fair-counsel-invoice.pdf';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      btn.textContent = 'Invoice downloaded ✓';
+    }catch(e){
+      showToast("Couldn't download your invoice right now, is the backend running?");
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }
   }
 
   // COMPANY-AWARE RATES ON BOOKING/PAYMENT
@@ -3880,12 +3901,14 @@
     go('tracker');
   }
 
+  let lastFinalPaymentId = null;
   async function payFinal(){
     const result = await payViaBackend('final', 1500 * 100);
     if(!result.ok && !result.offline){
       showToast((result.error && result.error.message) || 'Payment could not be confirmed. Nothing was charged.');
       return;
     }
+    if(result.payment) lastFinalPaymentId = result.payment.id;
     document.getElementById('finalPayPill').textContent = 'Paid';
     document.getElementById('finalPayPill').className = 'pay-pill pill-paid';
     document.getElementById('finalPayBtn').style.display = 'none';
