@@ -113,9 +113,22 @@ model Case {
   payouts        Payout[]
   supportTickets SupportTicket[]
   review         Review?
+  messages       Message[]
 
   @@index([clientId])
   @@index([lawyerId])
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  caseId     String
+  case       Case     @relation(fields: [caseId], references: [id])
+  senderRole String // user | lawyer - which side of the case sent it
+  senderId   String // User.id or Lawyer.id, matching senderRole
+  body       String
+  createdAt  DateTime @default(now())
+
+  @@index([caseId])
 }
 
 model Review {

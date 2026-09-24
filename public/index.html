@@ -1986,6 +1986,24 @@
   </div>
 </div>
 
+<!-- MESSAGES MODAL (case-scoped thread between client and lawyer) -->
+<div class="overlay-bg" id="messagesOverlay" onclick="closeMessagesModal()"></div>
+<div class="admin-panel" id="messagesModal">
+  <div class="admin-head">
+    <h3 class="serif">Messages, <span id="messagesFileCode"></span></h3>
+    <button class="close-x" onclick="closeMessagesModal()">×</button>
+  </div>
+  <div class="admin-body">
+    <div id="messagesThread" style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+    <div class="field">
+      <label for="messageInput">Message</label>
+      <textarea id="messageInput" rows="2" placeholder="Type a message…"></textarea>
+    </div>
+    <p class="revision-note" id="messagesError" style="color:var(--brick);display:none"></p>
+    <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="sendCaseMessage()">Send</button>
+  </div>
+</div>
+
 <!-- RESCHEDULE / CANCEL MODAL -->
 <div class="overlay-bg" id="reschedOverlay" onclick="closeReschedule()"></div>
 <div class="admin-panel" id="reschedModal">
@@ -2538,7 +2556,7 @@
         return `
         <div class="mycase-row">
           <div><div class="req-row-title">FILE ${c.fileCode}, ${c.category}</div><div class="req-row-sub">${lawyerName ? `With ${lawyerName} · ` : ''}Stage: ${c.stage}</div></div>
-          <div style="display:flex;gap:8px;align-items:center">${reviewBit}<span class="status-pill ${meta.cls}"${pillStyle}>${meta.label}</span><button class="btn btn-ghost" style="padding:8px 14px;font-size:12.5px" onclick="go('tracker')">View</button></div>
+          <div style="display:flex;gap:8px;align-items:center"><button class="btn btn-ghost" style="padding:8px 14px;font-size:12.5px" onclick="openMessagesModal('${c.id}','${c.fileCode}','user')">Messages</button>${reviewBit}<span class="status-pill ${meta.cls}"${pillStyle}>${meta.label}</span><button class="btn btn-ghost" style="padding:8px 14px;font-size:12.5px" onclick="go('tracker')">View</button></div>
         </div>`;
       }).join('');
     }catch(e){
@@ -2593,6 +2611,66 @@
       loadMyCases();
     }catch(e){
       errEl.textContent = e.message || 'Could not save your review right now.';
+      errEl.style.display = 'block';
+    }
+  }
+
+  // ============== CASE MESSAGES (client <-> lawyer thread) ==============
+  let messagesCaseId = null;
+  let messagesViewerRole = null; // 'user' | 'lawyer', whichever side has this modal open
+  let messagesToken = null; // null = use authToken (client); lawyerToken when opened from the lawyer dashboard
+  function openMessagesModal(caseId, fileCode, viewerRole, token){
+    messagesCaseId = caseId;
+    messagesViewerRole = viewerRole;
+    messagesToken = token || null;
+    document.getElementById('messagesFileCode').textContent = fileCode;
+    document.getElementById('messageInput').value = '';
+    document.getElementById('messagesError').style.display = 'none';
+    openModal('messagesModal','messagesOverlay');
+    loadCaseMessages();
+  }
+  function closeMessagesModal(){
+    closeModalGeneric('messagesModal','messagesOverlay');
+  }
+  async function loadCaseMessages(){
+    const thread = document.getElementById('messagesThread');
+    thread.innerHTML = '<p class="revision-note" style="margin:0">Loading…</p>';
+    try{
+      const messages = await api(`/cases/${messagesCaseId}/messages`, { token: messagesToken || undefined });
+      if(messages.length === 0){
+        thread.innerHTML = '<p class="revision-note" style="margin:0">No messages yet, say hello.</p>';
+        return;
+      }
+      thread.innerHTML = messages.map(m=>{
+        const mine = m.senderRole === messagesViewerRole;
+        const who = mine ? 'You' : (messagesViewerRole === 'user' ? 'Your lawyer' : 'Client');
+        const when = new Date(m.createdAt).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'});
+        return `<div style="align-self:${mine?'flex-end':'flex-start'};max-width:80%;background:${mine?'var(--navy)':'#F2EFE9'};color:${mine?'#fff':'#2b2a26'};padding:8px 12px;border-radius:10px">
+          <div style="font-size:11px;opacity:.75;margin-bottom:2px">${who} · ${when}</div>
+          <div style="font-size:13.5px;white-space:pre-wrap">${m.body.replace(/</g,'&lt;')}</div>
+        </div>`;
+      }).join('');
+      thread.scrollTop = thread.scrollHeight;
+    }catch(e){
+      thread.innerHTML = `<p class="revision-note" style="margin:0;color:var(--brick)">Couldn't load messages: ${e.message || 'unknown error'}</p>`;
+    }
+  }
+  async function sendCaseMessage(){
+    const input = document.getElementById('messageInput');
+    const errEl = document.getElementById('messagesError');
+    errEl.style.display = 'none';
+    const body = input.value.trim();
+    if(!body){
+      errEl.textContent = 'Type a message first.';
+      errEl.style.display = 'block';
+      return;
+    }
+    try{
+      await api(`/cases/${messagesCaseId}/messages`, { method:'POST', token: messagesToken || undefined, body:{ body } });
+      input.value = '';
+      loadCaseMessages();
+    }catch(e){
+      errEl.textContent = e.message || 'Could not send your message right now.';
       errEl.style.display = 'block';
     }
   }
@@ -4332,6 +4410,7 @@
         <div class="case-row" data-case-id="${c.id}">
           <div><div class="case-row-title">FILE ${c.fileCode}, ${c.category}</div><div class="case-row-sub">${c.channel === 'video' ? 'Video call' : 'Phone call'} consultation · stage: ${c.stage}</div></div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-ghost" style="padding:8px 14px;font-size:12.5px" onclick="openMessagesModal('${c.id}','${c.fileCode}','lawyer',lawyerToken)">Messages</button>
             <span class="status-pill ${meta.cls}">${meta.label}</span>
             ${draftHtml}
           </div>

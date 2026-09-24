@@ -92,4 +92,31 @@ router.post('/:id/review', requireAuth, async (req, res) => {
   }
 });
 
+/** GET /api/cases/:id/messages — either party to the case */
+router.get('/:id/messages', requireAuth, async (req, res) => {
+  const c = await prisma.case.findUnique({ where: { id: req.params.id } });
+  if (!canViewCase(req.user, c)) return res.status(404).json({ error: 'Not found' });
+  const messages = await prisma.message.findMany({ where: { caseId: c.id }, orderBy: { createdAt: 'asc' } });
+  res.json(messages);
+});
+
+/** POST /api/cases/:id/messages  { body } — either party to the case */
+router.post('/:id/messages', requireAuth, async (req, res) => {
+  try {
+    const c = await prisma.case.findUnique({ where: { id: req.params.id } });
+    if (!canViewCase(req.user, c)) return res.status(404).json({ error: 'Not found' });
+
+    const body = String(req.body?.body || '').trim().slice(0, 2000);
+    if (!body) return res.status(400).json({ error: 'Message cannot be empty' });
+
+    const message = await prisma.message.create({
+      data: { caseId: c.id, senderRole: req.user.role, senderId: req.user.sub, body }
+    });
+    res.status(201).json(message);
+  } catch (err) {
+    console.error('POST /api/cases/:id/messages failed:', err);
+    res.status(500).json({ error: 'Could not send your message right now' });
+  }
+});
+
 module.exports = router;
