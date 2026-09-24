@@ -952,6 +952,7 @@
         <div class="step4card"><div class="step4num">03</div><h3 data-i18n="step3h">Drafting begins</h3><p data-i18n="step3p">Like the work? Pay the advance. Your lawyer drafts, and Fair Counsel reviews before it reaches you.</p></div>
         <div class="step4card"><div class="step4num">04</div><h3 data-i18n="step4h">Receive & execute</h3><p data-i18n="step4p">Download your finished document. One free revision included, ready to execute.</p></div>
       </div>
+      <p style="text-align:center;margin-top:18px;font-size:13px"><a href="#" onclick="openLegal('faq');return false;" style="color:var(--navy)">Questions about pricing or revisions? See the FAQ →</a></p>
     </div>
 
   </section>
@@ -1737,6 +1738,7 @@
   <div class="foot-row">
     <div data-i18n="footTagline">© 2026 Fair Counsel. A pan-India legal marketplace.</div>
     <div class="foot-links">
+      <a href="#" onclick="openLegal('faq');return false;">FAQ</a>
       <a href="#" onclick="openLegal('terms');return false;" data-i18n="footTerms">Terms of Service</a>
       <a href="#" onclick="openLegal('privacy');return false;" data-i18n="footPrivacy">Privacy Policy</a>
       <a href="#" onclick="openLegal('refund');return false;" data-i18n="footRefund">Refund Policy</a>
@@ -3214,6 +3216,40 @@
 
       <h4 ${LEGAL_H}>Response timelines</h4>
       <p ${LEGAL_P}>We acknowledge every grievance within 24 hours of receipt and aim to resolve it within 15 days, in line with the IT Rules, 2021. Complaints involving suspected unlawful content may be actioned sooner where required by law.</p>
+    `},
+    faq: {title:'Frequently Asked Questions', body:`
+      <h4 ${LEGAL_H}>How does the pricing actually work?</h4>
+      <p ${LEGAL_P}>There are up to three separate payments, and you decide whether to proceed at each one — nothing is charged automatically:</p>
+      <ul ${LEGAL_UL}>
+        <li><strong>1. Consultation</strong> — a fixed fee, shown upfront before you book, for a video or phone call up to 30 minutes.</li>
+        <li><strong>2. Advance</strong> — only if you choose to proceed after the consultation. Your lawyer gives you a specific quote for the drafting work, and you approve it before paying.</li>
+        <li><strong>3. Final payment</strong> — due once your reviewed, finished document is ready, before you download it.</li>
+      </ul>
+      <p ${LEGAL_P}>You can stop after the consultation and pay nothing further if you don't want to proceed.</p>
+
+      <h4 ${LEGAL_H}>What does "reviewed before it reaches you" mean?</h4>
+      <p ${LEGAL_P}>Every document your lawyer drafts is checked by the Fair Counsel team for completeness before it's released to you — it's a quality check, not a second legal opinion. The lawyer you engage remains responsible for the document's legal content.</p>
+
+      <h4 ${LEGAL_H}>What's the revision policy?</h4>
+      <p ${LEGAL_P}>One revision is included in your final payment at no extra charge. A second revision is available if you need it, quoted separately by your lawyer based on the scope of the change.</p>
+
+      <h4 ${LEGAL_H}>How are lawyers verified?</h4>
+      <p ${LEGAL_P}>Every lawyer's Bar Council registration number and identity documents are checked by Fair Counsel's team before they're listed publicly. This confirms they're validly enrolled to practice — see our <a href="#" onclick="openLegal('terms');return false;" style="color:var(--navy)">Terms of Service</a> for what this verification does and doesn't cover.</p>
+
+      <h4 ${LEGAL_H}>Can I get a refund?</h4>
+      <p ${LEGAL_P}>Depends what stage you're at — see our full <a href="#" onclick="openLegal('refund');return false;" style="color:var(--navy)">Refund Policy</a>. Short version: consultation fees are fully refundable if you cancel 24+ hours ahead or the lawyer doesn't show; advance payments are refundable minus completed work if disputed within 7 days; final payments are generally non-refundable once your document is delivered.</p>
+
+      <h4 ${LEGAL_H}>What is "Fair Counsel Assist"?</h4>
+      <p ${LEGAL_P}>The "describe it in your words" option matches your description to a specialisation and city using keyword matching against our real lawyer roster — it isn't an AI reading or analysing your case, and what you type isn't used to train any model.</p>
+
+      <h4 ${LEGAL_H}>How do I become a lawyer on Fair Counsel?</h4>
+      <p ${LEGAL_P}>Apply from the <a href="#" onclick="closeLegal();enterLawyerPortal();return false;" style="color:var(--navy)">Careers</a> page with your Bar registration details and ID. Fair Counsel takes a 15% platform fee on payments you receive through the platform — no separate signup or listing fee.</p>
+
+      <h4 ${LEGAL_H}>Is my information kept confidential?</h4>
+      <p ${LEGAL_P}>Case details and documents are visible only to your assigned lawyer and the Fair Counsel staff reviewing your case — never to other clients or lawyers on the platform. See our <a href="#" onclick="openLegal('privacy');return false;" style="color:var(--navy)">Privacy Policy</a> for the full detail.</p>
+
+      <h4 ${LEGAL_H}>Still have a question?</h4>
+      <p ${LEGAL_P}>Raise a ticket from your case tracker if it's about an active case (fastest), or see <a href="#" onclick="openLegal('contact');return false;" style="color:var(--navy)">Contact Us</a>.</p>
     `}
   };
   function openLegal(key){
