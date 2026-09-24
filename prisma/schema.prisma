@@ -81,6 +81,7 @@ model Lawyer {
   barIdOriginalName      String? // Bar Council ID uploaded with the application, admin-only download
   barIdStoredPath        String?
   barIdMimeType          String?
+  availability           String   @default("[]") // JSON-encoded string[] of "Day-period" slot keys, e.g. "Mon-morning"
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 

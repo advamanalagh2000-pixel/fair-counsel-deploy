@@ -29,14 +29,14 @@ function fromArr(arr) {
  */
 function serializeLawyer(l) {
   if (!l) return l;
-  const { barIdStoredPath, ...rest } = { ...l, tags: toArr(l.tags), specs: toArr(l.specs), langs: toArr(l.langs) };
+  const { barIdStoredPath, ...rest } = { ...l, tags: toArr(l.tags), specs: toArr(l.specs), langs: toArr(l.langs), availability: toArr(l.availability) };
   return rest;
 }
 
 /** Same as serializeLawyer, but strips contact details, for public/unauthenticated responses. */
 function serializePublicLawyer(l) {
   if (!l) return l;
-  const { phone, email, rejectionReason, barIdOriginalName, barIdMimeType, ...rest } = serializeLawyer(l);
+  const { phone, email, rejectionReason, barIdOriginalName, barIdMimeType, availability, ...rest } = serializeLawyer(l);
   return rest;
 }
 

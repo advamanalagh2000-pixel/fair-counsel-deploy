@@ -1033,8 +1033,7 @@
         <strong data-i18n="reqSentTitle">Request sent for admin approval.</strong><br>
         Fair Counsel is reviewing your request for <span id="chosenLawyerName">Adv. Meera Kulkarni</span>. You'll be notified within 2 hours once confirmed.
         <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn btn-primary" onclick="confirmBookingRequest()" data-i18n="simApproval">Simulate approval → Continue to booking</button>
-          <button class="btn btn-ghost" onclick="simulateDecline()" data-i18n="simDecline">Simulate: lawyer unavailable</button>
+          <button class="btn btn-primary" onclick="confirmBookingRequest()" data-i18n="simApproval">Continue to booking →</button>
         </div>
       </div>
     </div>
@@ -1149,7 +1148,6 @@
       </div>
 
       <button class="btn btn-brass btn-block" style="margin-top:20px" onclick="payNow()"><span data-i18n="payConsultBtn">Pay consultation fee</span>, ₹1,000</button>
-      <p style="text-align:center;margin-top:8px"><button class="msg-preview-toggle" onclick="simulatePayFail()" data-i18n="simPayFail">Simulate: payment failed</button></p>
       <div class="fail-box" id="payFailBox" style="display:none">
         <span style="font-size:16px">⚠️</span>
         <div><strong data-i18n="payFailTitle">Payment didn't go through.</strong> <span data-i18n="payFailBody">No amount was deducted. This can happen if your bank declines the transaction or the session times out, try again, or use a different payment method.</span>
@@ -1290,7 +1288,6 @@
       </div>
 
       <div style="margin-top:26px;padding-top:20px;border-top:1px solid var(--line);display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn btn-ghost" onclick="simulateReady()" data-i18n="simReadyBtn">Simulate: mark draft ready</button>
         <button class="btn btn-ghost" onclick="openTicket()" data-i18n="raiseTicketBtn">Raise a ticket</button>
       </div>
 
@@ -1500,16 +1497,10 @@
     <div id="lawDashCases"></div>
 
     <h3 class="serif" style="color:var(--navy);font-size:16px;margin:26px 0 4px">Your availability</h3>
-    <p class="revision-note" style="margin-top:-2px">Visual only for now, not yet saved to the backend.</p>
+    <p class="revision-note" style="margin-top:-2px" id="availSaveNote">Saved automatically as you toggle slots.</p>
     <p class="section-sub" style="margin-bottom:0">Toggle slots you're free for consultations this week.</p>
-    <div class="avail-grid">
+    <div class="avail-grid" id="availGrid">
       <div></div><div class="avail-head">Mon</div><div class="avail-head">Tue</div><div class="avail-head">Wed</div><div class="avail-head">Thu</div><div class="avail-head">Fri</div><div class="avail-head">Sat</div><div class="avail-head">Sun</div>
-      <div class="avail-head" style="text-align:left">Morning</div>
-      <div class="avail-cell on" onclick="this.classList.toggle('on')"></div><div class="avail-cell" onclick="this.classList.toggle('on')"></div><div class="avail-cell on" onclick="this.classList.toggle('on')"></div><div class="avail-cell on" onclick="this.classList.toggle('on')"></div><div class="avail-cell" onclick="this.classList.toggle('on')"></div><div class="avail-cell" onclick="this.classList.toggle('on')"></div><div class="avail-cell" onclick="this.classList.toggle('on')"></div>
-      <div class="avail-head" style="text-align:left">Afternoon</div>
-      <div class="avail-cell on" onclick="this.classList.toggle('on')"></div><div class="avail-cell on" onclick="this.classList.toggle('on')"></div><div class="avail-cell" onclick="this.classList.toggle('on')"></div><div class="avail-cell on" onclick="this.classList.toggle('on')"></div><div class="avail-cell on" onclick="this.classList.toggle('on')"></div><div class="avail-cell" onclick="this.classList.toggle('on')"></div><div class="avail-cell" onclick="this.classList.toggle('on')"></div>
-      <div class="avail-head" style="text-align:left">Evening</div>
-      <div class="avail-cell" onclick="this.classList.toggle('on')"></div><div class="avail-cell" onclick="this.classList.toggle('on')"></div><div class="avail-cell on" onclick="this.classList.toggle('on')"></div><div class="avail-cell" onclick="this.classList.toggle('on')"></div><div class="avail-cell on" onclick="this.classList.toggle('on')"></div><div class="avail-cell" onclick="this.classList.toggle('on')"></div><div class="avail-cell" onclick="this.classList.toggle('on')"></div>
     </div>
   </section>
 
@@ -1756,15 +1747,15 @@
     <div class="gate-wrap">
       <div class="field" style="margin-bottom:14px">
         <label for="gateUser">Admin username</label>
-        <input type="text" id="gateUser" autocomplete="off" placeholder="admin">
+        <input type="text" id="gateUser" autocomplete="off" placeholder="Username">
       </div>
       <div class="field" style="margin-bottom:6px">
         <label for="gatePass">Admin password</label>
-        <input type="password" id="gatePass" autocomplete="off" placeholder="Prototype password: admin123" onkeydown="if(event.key==='Enter'){submitAdminGate();}">
+        <input type="password" id="gatePass" autocomplete="off" placeholder="Password" onkeydown="if(event.key==='Enter'){submitAdminGate();}">
       </div>
       <p class="otp-error" id="gateError">Incorrect username or password. Try again.</p>
       <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="submitAdminGate()">Sign in to admin</button>
-      <div class="gate-note">Real server-side session (username: <strong>admin</strong>, password: <strong>admin123</strong> for this demo seed, change before any real deployment). This seeded account is a superadmin, it can create further admin accounts from the Admins tab once you're signed in.</div>
+      <div class="gate-note">Real server-side session. Superadmin accounts can create further admin accounts from the Admins tab once signed in.</div>
     </div>
   </div>
 </div>
@@ -2837,8 +2828,7 @@
     pagerPrev: { en: `← Previous`, hi: `← पिछला` },
     pagerNext: { en: `Next →`, hi: `अगला →` },
     reqSentTitle: { en: `Request sent for admin approval.`, hi: `अनुरोध एडमिन की स्वीकृति के लिए भेजा गया।` },
-    simApproval: { en: `Simulate approval → Continue to booking`, hi: `स्वीकृति का अनुकरण करें → बुकिंग पर जारी रखें` },
-    simDecline: { en: `Simulate: lawyer unavailable`, hi: `अनुकरण करें: वकील उपलब्ध नहीं` },
+    simApproval: { en: `Continue to booking →`, hi: `बुकिंग पर जारी रखें →` },
     chooseDiffLawyer: { en: `Choose a different lawyer`, hi: `कोई अन्य वकील चुनें` },
     bookH2: { en: `Schedule your consultation`, hi: `अपना परामर्श निर्धारित करें` },
     chooseDuration: { en: `Choose duration`, hi: `अवधि चुनें` },
@@ -2860,7 +2850,6 @@
     quotedAfterCall: { en: `Quoted after call`, hi: `कॉल के बाद कोटेशन` },
     lockedPill: { en: `Locked`, hi: `लॉक्ड` },
     payConsultBtn: { en: `Pay consultation fee`, hi: `परामर्श शुल्क का भुगतान करें` },
-    simPayFail: { en: `Simulate: payment failed`, hi: `अनुकरण करें: भुगतान विफल` },
     payFailTitle: { en: `Payment didn't go through.`, hi: `भुगतान सफल नहीं हुआ।` },
     payFailBody: { en: `No amount was deducted. This can happen if your bank declines the transaction or the session times out, try again, or use a different payment method.`, hi: `कोई राशि नहीं काटी गई। ऐसा तब हो सकता है जब आपका बैंक लेनदेन अस्वीकार कर दे या सत्र का समय समाप्त हो जाए, फिर से कोशिश करें, या कोई अन्य भुगतान तरीका उपयोग करें।` },
     tryAgainBtn: { en: `Try again`, hi: `फिर से कोशिश करें` },
@@ -2911,7 +2900,6 @@
     tl3d: { en: `Every draft is reviewed by the Fair Counsel team before it's released to you.`, hi: `हर ड्राफ़्ट आप तक पहुँचने से पहले फेयर काउंसल टीम द्वारा समीक्षित किया जाता है।` },
     tl4t: { en: `Final draft ready`, hi: `अंतिम ड्राफ़्ट तैयार` },
     tl4d: { en: `You'll be notified the moment it's available to download.`, hi: `डाउनलोड के लिए उपलब्ध होते ही आपको सूचित किया जाएगा।` },
-    simReadyBtn: { en: `Simulate: mark draft ready`, hi: `अनुकरण करें: ड्राफ़्ट तैयार के रूप में चिह्नित करें` },
     raiseTicketBtn: { en: `Raise a ticket`, hi: `टिकट दर्ज करें` },
     finalPayT: { en: `Final payment`, hi: `अंतिम भुगतान` },
     finalPayD: { en: `Releases your finished, admin-reviewed draft`, hi: `आपका तैयार, एडमिन-समीक्षित ड्राफ़्ट जारी करता है` },
@@ -3731,14 +3719,6 @@
     go('tracker');
   }
 
-  function simulateReady(){
-    document.getElementById('tlReview').classList.remove('active');
-    document.getElementById('tlReview').classList.add('done');
-    document.querySelectorAll('.tl-item')[3].classList.add('active');
-    document.getElementById('readyBox').style.display = 'block';
-    document.getElementById('readyBox').scrollIntoView({behavior:'smooth', block:'center'});
-  }
-
   async function payFinal(){
     const result = await payViaBackend('final', 1500 * 100);
     if(!result.ok && !result.offline){
@@ -3903,12 +3883,56 @@
     payment_pending: { label: 'Awaiting payment', cls: 'status-wait' },
     closed: { label: 'Closed', cls: 'status-quote' }
   };
+  // AVAILABILITY GRID — persisted per lawyer via PUT /api/lawyers/me/availability
+  const AVAIL_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const AVAIL_PERIODS = [['morning','Morning'],['afternoon','Afternoon'],['evening','Evening']];
+  function renderAvailabilityGrid(){
+    const grid = document.getElementById('availGrid');
+    const onSlots = new Set(currentLawyerProfile?.availability || []);
+    // Keep the header row (first 8 children), rebuild the period rows after it.
+    grid.querySelectorAll('.avail-head[data-period], .avail-cell').forEach(el=>el.remove());
+    AVAIL_PERIODS.forEach(([period, label])=>{
+      const rowLabel = document.createElement('div');
+      rowLabel.className = 'avail-head';
+      rowLabel.setAttribute('data-period', period);
+      rowLabel.style.textAlign = 'left';
+      rowLabel.textContent = label;
+      grid.appendChild(rowLabel);
+      AVAIL_DAYS.forEach(day=>{
+        const slot = `${day}-${period}`;
+        const cell = document.createElement('div');
+        cell.className = 'avail-cell' + (onSlots.has(slot) ? ' on' : '');
+        cell.setAttribute('data-slot', slot);
+        cell.onclick = ()=> toggleAvailSlot(cell, slot);
+        grid.appendChild(cell);
+      });
+    });
+  }
+  let availSaveTimer = null;
+  async function toggleAvailSlot(cell, slot){
+    cell.classList.toggle('on');
+    const onSlots = Array.from(document.querySelectorAll('#availGrid .avail-cell.on')).map(c=>c.getAttribute('data-slot'));
+    currentLawyerProfile.availability = onSlots;
+    const noteEl = document.getElementById('availSaveNote');
+    noteEl.textContent = 'Saving…';
+    clearTimeout(availSaveTimer);
+    availSaveTimer = setTimeout(async ()=>{
+      try{
+        await api('/lawyers/me/availability', { method:'PUT', token: lawyerToken, body:{ slots: onSlots } });
+        noteEl.textContent = 'Saved automatically as you toggle slots.';
+      }catch(e){
+        noteEl.textContent = 'Could not save just now, try again.';
+      }
+    }, 500);
+  }
+
   async function loadLawyerDashboard(){
     const nameEl = document.getElementById('lawDashName');
     const subEl = document.getElementById('lawDashSub');
     if(currentLawyerProfile){
       nameEl.textContent = 'Welcome back, ' + currentLawyerProfile.name;
       subEl.textContent = currentLawyerProfile.specs.join(', ') + ' · ' + currentLawyerProfile.city;
+      renderAvailabilityGrid();
     }
     const listEl = document.getElementById('lawDashCases');
     listEl.innerHTML = '<p class="revision-note">Loading your cases…</p>';
@@ -4444,20 +4468,6 @@
     const box = document.getElementById('caseDocUpload');
     box.textContent = '✓ rent_notice_scan.pdf attached, visible only to your lawyer and Fair Counsel review';
     box.style.color = 'var(--sage)';
-  }
-
-  // REQUEST DECLINE SIMULATION
-  function simulateDecline(){
-    document.getElementById('declineLawyerName').textContent = document.getElementById('chosenLawyerName').textContent;
-    document.getElementById('pendingBox').style.display = 'none';
-    document.getElementById('declineBox').style.display = 'flex';
-    document.getElementById('declineBox').scrollIntoView({behavior:'smooth', block:'center'});
-  }
-
-  // PAYMENT FAILURE SIMULATION
-  function simulatePayFail(){
-    document.getElementById('payFailBox').style.display = 'flex';
-    document.getElementById('payFailBox').scrollIntoView({behavior:'smooth', block:'center'});
   }
 
   // LAWYER WITHDRAW FROM CASE

@@ -3,7 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuid } = require('uuid');
-const { prisma, serializeLawyer, serializePublicLawyer, fromArr } = require('../prisma');
+const { prisma, serializeLawyer, serializePublicLawyer, fromArr, toArr } = require('../prisma');
 const { requireLawyer } = require('../middleware/auth');
 const { applyLimiter } = require('../middleware/rateLimit');
 const { logAudit } = require('../services/auditLog');
@@ -124,6 +124,30 @@ router.get('/me', requireLawyer, async (req, res) => {
   const lawyer = await prisma.lawyer.findUnique({ where: { id: req.lawyer.sub } });
   if (!lawyer) return res.status(404).json({ error: 'Not found' });
   res.json(serializeLawyer(lawyer));
+});
+
+const AVAILABILITY_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const AVAILABILITY_PERIODS = ['morning', 'afternoon', 'evening'];
+const VALID_AVAILABILITY_SLOTS = new Set(
+  AVAILABILITY_DAYS.flatMap(day => AVAILABILITY_PERIODS.map(period => `${day}-${period}`))
+);
+
+/** PUT /api/lawyers/me/availability  { slots: string[] } — the lawyer's own weekly availability grid */
+router.put('/me/availability', requireLawyer, async (req, res) => {
+  try {
+    const { slots } = req.body || {};
+    if (!Array.isArray(slots) || slots.some(s => !VALID_AVAILABILITY_SLOTS.has(s))) {
+      return res.status(400).json({ error: 'slots must be an array of valid "Day-period" keys' });
+    }
+    const lawyer = await prisma.lawyer.update({
+      where: { id: req.lawyer.sub },
+      data: { availability: fromArr([...new Set(slots)]) }
+    });
+    res.json({ availability: toArr(lawyer.availability) });
+  } catch (err) {
+    console.error('PUT /api/lawyers/me/availability failed:', err);
+    res.status(500).json({ error: 'Could not save availability right now' });
+  }
 });
 
 /** GET /api/lawyers/:id */
