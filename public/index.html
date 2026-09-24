@@ -4157,15 +4157,23 @@
     try{
       const lawyers = await api('/admin/lawyers', { admin:true });
       document.getElementById('dashLawyersEmpty').style.display = lawyers.length === 0 ? 'block' : 'none';
-      const statusPill = { verified: 'status-review', pending: 'status-wait', rejected: 'status-quote' };
-      tbody.innerHTML = lawyers.map(l => `
+      const statusPill = { verified: 'status-review', pending: 'status-wait', rejected: 'status-quote', suspended: 'status-wait' };
+      tbody.innerHTML = lawyers.map(l => {
+        const nameArg = `'${l.id}','${l.name.replace(/'/g,"\\'")}'`;
+        const suspendBtn = l.status === 'verified'
+          ? `<button class="mini-btn reject" onclick="suspendLawyerProfile(${nameArg})">Suspend</button>`
+          : l.status === 'suspended'
+            ? `<button class="mini-btn approve" onclick="reinstateLawyerProfile(${nameArg})">Reinstate</button>`
+            : '';
+        return `
         <tr data-lawyer-row="${l.id}">
           <td><strong style="color:var(--navy)">${l.name}</strong></td>
           <td>${l.specs.join(', ')} · ${l.city}</td>
           <td><span class="status-pill ${statusPill[l.status] || 'status-wait'}">${l.status}</span></td>
           <td class="mono" style="font-size:11.5px">${l.phone || '—'}</td>
-          <td><button class="mini-btn reject" onclick="deleteLawyerProfile('${l.id}', '${l.name.replace(/'/g,"\\'")}')">Delete</button></td>
-        </tr>`).join('');
+          <td style="display:flex;gap:6px;flex-wrap:wrap">${suspendBtn}<button class="mini-btn reject" onclick="deleteLawyerProfile(${nameArg})">Delete</button></td>
+        </tr>`;
+      }).join('');
     }catch(e){
       tbody.innerHTML = `<tr><td colspan="5">Couldn't load lawyers: ${e.message || 'unknown error'}</td></tr>`;
     }
@@ -4179,6 +4187,33 @@
       loadAdminAuditLog();
     }catch(e){
       showToast(e.message || 'Could not delete this lawyer.');
+    }
+  }
+  // Suspend is the middle ground short of delete: hidden from public search
+  // and can't take new bookings, but keeps their case history and login
+  // intact (unlike delete, which is blocked entirely once any exists).
+  async function suspendLawyerProfile(id, name){
+    const reason = prompt(`Why are you suspending ${name}? This is recorded and shown if they ask.`);
+    if(reason === null) return;
+    if(!reason.trim()){ showToast('A reason is required to suspend a lawyer.'); return; }
+    try{
+      await api(`/admin/lawyers/${id}/suspend`, { method:'POST', admin:true, body:{ reason } });
+      showToast(`${name} has been suspended.`);
+      loadAdminAllLawyers();
+      loadAdminAuditLog();
+    }catch(e){
+      showToast(e.message || 'Could not suspend this lawyer.');
+    }
+  }
+  async function reinstateLawyerProfile(id, name){
+    if(!confirm(`Reinstate ${name}? They'll be publicly bookable again immediately.`)) return;
+    try{
+      await api(`/admin/lawyers/${id}/reinstate`, { method:'POST', admin:true });
+      showToast(`${name} has been reinstated.`);
+      loadAdminAllLawyers();
+      loadAdminAuditLog();
+    }catch(e){
+      showToast(e.message || 'Could not reinstate this lawyer.');
     }
   }
 

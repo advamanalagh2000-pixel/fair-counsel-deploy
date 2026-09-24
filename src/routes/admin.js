@@ -179,6 +179,34 @@ router.get('/lawyers', requireAdmin, async (req, res) => {
   res.json(lawyers.map(serializeLawyer));
 });
 
+/**
+ * POST /api/admin/lawyers/:id/suspend  { reason } — a middle ground short of
+ * deletion: hidden from public search and blocked from new bookings (both
+ * already gate on status === 'verified'), but existing cases/history and
+ * the lawyer's own login are untouched, unlike delete which is blocked
+ * entirely once there's any case history.
+ */
+router.post('/lawyers/:id/suspend', requireAdmin, async (req, res) => {
+  const { reason } = req.body || {};
+  if (!reason || !reason.trim()) return res.status(400).json({ error: 'A reason for suspending is required' });
+  const existing = await prisma.lawyer.findUnique({ where: { id: req.params.id } });
+  if (!existing) return res.status(404).json({ error: 'Not found' });
+  if (existing.status !== 'verified') return res.status(400).json({ error: 'Only a verified lawyer can be suspended' });
+  const lawyer = await prisma.lawyer.update({ where: { id: req.params.id }, data: { status: 'suspended', rejectionReason: reason } });
+  logAudit('no', `${lawyer.name} suspended by admin "${req.admin.username}" ("${reason}")`);
+  res.json(serializeLawyer(lawyer));
+});
+
+/** POST /api/admin/lawyers/:id/reinstate — reverses a suspension, back to verified and publicly bookable */
+router.post('/lawyers/:id/reinstate', requireAdmin, async (req, res) => {
+  const existing = await prisma.lawyer.findUnique({ where: { id: req.params.id } });
+  if (!existing) return res.status(404).json({ error: 'Not found' });
+  if (existing.status !== 'suspended') return res.status(400).json({ error: 'Only a suspended lawyer can be reinstated' });
+  const lawyer = await prisma.lawyer.update({ where: { id: req.params.id }, data: { status: 'verified', rejectionReason: null } });
+  logAudit('ok', `${lawyer.name} reinstated by admin "${req.admin.username}"`);
+  res.json(serializeLawyer(lawyer));
+});
+
 /** DELETE /api/admin/lawyers/:id — blocked if the lawyer has any case history, to preserve payment/audit records */
 router.delete('/lawyers/:id', requireAdmin, async (req, res) => {
   const lawyer = await prisma.lawyer.findUnique({ where: { id: req.params.id } });

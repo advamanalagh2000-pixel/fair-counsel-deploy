@@ -76,7 +76,7 @@ model Lawyer {
   bio                    String   @default("")
   turnaround             String   @default("")
   starting               String   @default("")
-  status                 String   @default("pending") // pending | verified | rejected
+  status                 String   @default("pending") // pending | verified | rejected | suspended
   rejectionReason        String?
   barIdOriginalName      String? // Bar Council ID uploaded with the application, admin-only download
   barIdStoredPath        String?

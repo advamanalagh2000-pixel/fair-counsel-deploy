@@ -156,7 +156,10 @@ router.post('/lawyer/verify-otp', loginLimiter, async (req, res) => {
   await prisma.otp.update({ where: { id: record.id }, data: { consumed: true } });
 
   const lawyer = await prisma.lawyer.findUnique({ where: { phone: record.phone } });
-  if (!lawyer || lawyer.status !== 'verified') {
+  // A suspended lawyer can still log in and see their existing cases -
+  // suspension only blocks new bookings (cases.js gates that on
+  // status === 'verified' separately), it isn't a full account lockout.
+  if (!lawyer || (lawyer.status !== 'verified' && lawyer.status !== 'suspended')) {
     return res.status(403).json({ error: 'This lawyer account is no longer eligible to log in' });
   }
 
