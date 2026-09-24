@@ -1519,6 +1519,7 @@
     <div class="dash-tabs" style="margin-top:18px">
       <button class="dash-tab on" id="mcTabBtn-cases" onclick="switchMyCasesTab('cases',this)"><span data-i18n="mcTabCases">Cases</span></button>
       <button class="dash-tab" id="mcTabBtn-docs" onclick="switchMyCasesTab('docs',this)"><span data-i18n="mcTabDocs">My Documents</span></button>
+      <button class="dash-tab" id="mcTabBtn-account" onclick="switchMyCasesTab('account',this)">Account &amp; Privacy</button>
     </div>
 
     <div class="dash-panel on" id="mcPanel-cases">
@@ -1529,6 +1530,16 @@
     <div class="dash-panel" id="mcPanel-docs">
       <p class="section-sub" data-i18n="mcDocsIntro" style="margin-top:0">Every document across all your cases, in one place, real files pulled from the backend, not per-case only.</p>
       <div id="mcDocsList"></div>
+    </div>
+
+    <div class="dash-panel" id="mcPanel-account">
+      <p class="section-sub" style="margin-top:0">Your account details and data, per Fair Counsel's <a href="#" onclick="openLegal('privacy');return false;" style="color:var(--navy)">Privacy Policy</a>.</p>
+      <div id="mcAccountProfile" class="gate-note" style="margin-top:0"></div>
+      <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-ghost" onclick="downloadMyData()">Download my data</button>
+        <button class="btn btn-ghost" style="border-color:var(--brick);color:var(--brick)" onclick="requestAccountDeletion()">Delete my account</button>
+      </div>
+      <p class="revision-note" id="accountActionNote" style="margin-top:10px"></p>
     </div>
   </section>
 
@@ -2368,6 +2379,52 @@
     document.getElementById('mcPanel-'+name).classList.add('on');
     if(name === 'docs') loadMyDocuments();
     if(name === 'cases') loadMyCases();
+    if(name === 'account') loadMyAccount();
+  }
+
+  async function loadMyAccount(){
+    const el = document.getElementById('mcAccountProfile');
+    el.textContent = 'Loading…';
+    try{
+      const me = await api('/auth/me');
+      el.innerHTML = `<strong>${me.name || 'No name on file'}</strong><br>Phone: ${me.phone}<br>Account type: ${me.clientType === 'company' ? 'Company / Business' : 'Individual'}${me.companyName ? '<br>Company: '+me.companyName : ''}<br>Member since: ${new Date(me.createdAt).toLocaleDateString('en-IN',{dateStyle:'medium'})}`;
+    }catch(e){
+      el.textContent = "Couldn't load your account details right now.";
+    }
+  }
+
+  async function downloadMyData(){
+    const note = document.getElementById('accountActionNote');
+    note.textContent = 'Preparing your data…';
+    try{
+      const res = await fetch(API_BASE + '/auth/me/data', { headers: { Authorization: 'Bearer ' + authToken } });
+      if(!res.ok) throw new Error('Download failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'fair-counsel-my-data.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      note.textContent = 'Downloaded.';
+    }catch(e){
+      note.textContent = "Couldn't download your data right now, is the backend running?";
+    }
+  }
+
+  async function requestAccountDeletion(){
+    if(!confirm("Delete your Fair Counsel account? This can't be undone, and only works if you have no case history — if you do, we'll point you to support instead.")) return;
+    const note = document.getElementById('accountActionNote');
+    try{
+      await api('/auth/me', { method:'DELETE' });
+      note.textContent = 'Your account has been deleted.';
+      showToast('Account deleted.');
+      loggedIn = false;
+      authToken = null;
+      saveState();
+      setTimeout(()=>reopenEntry(), 1200);
+    }catch(e){
+      note.textContent = e.message || 'Could not delete your account right now.';
+    }
   }
 
   const MY_CASE_STATUS_LABEL = {

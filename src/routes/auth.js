@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { prisma, serializeLawyer } = require('../prisma');
 const { sendOtp } = require('../services/smsProvider');
-const { signSession } = require('../middleware/auth');
+const { signSession, requireAuth } = require('../middleware/auth');
 const { otpSendLimiter, loginLimiter } = require('../middleware/rateLimit');
 const { logAudit } = require('../services/auditLog');
 
@@ -179,6 +179,61 @@ router.post('/admin-login', loginLimiter, async (req, res) => {
   const token = signSession({ sub: admin.id, role: 'admin', adminRole: admin.role, username: admin.username }, '8h');
   logAudit('ok', `Admin "${admin.username}" signed in`);
   res.json({ token, admin: { username: admin.username, role: admin.role } });
+});
+
+/** GET /api/auth/me — the logged-in client's own profile */
+router.get('/me', requireAuth, async (req, res) => {
+  if (req.user.role !== 'user') return res.status(403).json({ error: 'Only clients have a profile here' });
+  const user = await prisma.user.findUnique({ where: { id: req.user.sub } });
+  if (!user) return res.status(404).json({ error: 'Not found' });
+  res.json(user);
+});
+
+/**
+ * GET /api/auth/me/data — DPDP-style data export: everything Fair Counsel
+ * holds about this client, as one JSON file they can download. Documents
+ * are listed by metadata only (name/size/status), not the file contents -
+ * those are downloaded separately via the existing per-document route.
+ */
+router.get('/me/data', requireAuth, async (req, res) => {
+  if (req.user.role !== 'user') return res.status(403).json({ error: 'Only clients can export data here' });
+  const user = await prisma.user.findUnique({ where: { id: req.user.sub } });
+  if (!user) return res.status(404).json({ error: 'Not found' });
+  const cases = await prisma.case.findMany({ where: { clientId: user.id }, include: { payments: true, documents: true, supportTickets: true } });
+  const exportPayload = {
+    exportedAt: new Date().toISOString(),
+    profile: user,
+    cases: cases.map(c => ({
+      fileCode: c.fileCode, category: c.category, status: c.status, stage: c.stage, channel: c.channel, createdAt: c.createdAt,
+      payments: c.payments.map(p => ({ stage: p.stage, amountPaise: p.amountPaise, status: p.status, paidAt: p.paidAt })),
+      documents: c.documents.map(d => ({ originalName: d.originalName, status: d.status, sizeBytes: d.sizeBytes, createdAt: d.createdAt })),
+      supportTickets: c.supportTickets.map(t => ({ subject: t.subject, details: t.details, status: t.status, createdAt: t.createdAt }))
+    }))
+  };
+  res.setHeader('Content-Disposition', 'attachment; filename="fair-counsel-my-data.json"');
+  res.json(exportPayload);
+});
+
+/**
+ * DELETE /api/auth/me — self-service account deletion, same protection the
+ * admin-side deletion already has: blocked while any case history exists,
+ * to keep payment/audit records intact. A client with case history who
+ * wants to be forgotten needs to go through support (raise a ticket) so a
+ * human can weigh the DPDP erasure request against the retention
+ * obligations - this isn't something that should silently no-op or
+ * silently destroy financial records either way.
+ */
+router.delete('/me', requireAuth, async (req, res) => {
+  if (req.user.role !== 'user') return res.status(403).json({ error: 'Only clients can delete their account here' });
+  const user = await prisma.user.findUnique({ where: { id: req.user.sub } });
+  if (!user) return res.status(404).json({ error: 'Not found' });
+  const caseCount = await prisma.case.count({ where: { clientId: user.id } });
+  if (caseCount > 0) {
+    return res.status(400).json({ error: `Your account has ${caseCount} case(s) on record, so it can't be deleted automatically, to keep payment and audit records intact. Raise a support ticket and our team will handle your request.` });
+  }
+  await prisma.user.delete({ where: { id: user.id } });
+  logAudit('no', `Client "${user.name || user.phone}" deleted their own account`);
+  res.json({ ok: true });
 });
 
 module.exports = router;
