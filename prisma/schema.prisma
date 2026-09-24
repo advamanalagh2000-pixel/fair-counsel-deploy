@@ -50,11 +50,13 @@ model Otp {
 }
 
 model Admin {
-  id           String   @id @default(uuid())
-  username     String   @unique
-  passwordHash String
-  role         String   @default("admin") // admin | superadmin. Only superadmin can create/list other admin accounts
-  createdAt    DateTime @default(now())
+  id            String   @id @default(uuid())
+  username      String   @unique
+  passwordHash  String
+  role          String   @default("admin") // admin | superadmin. Only superadmin can create/list other admin accounts
+  totpSecret    String? // set as soon as setup starts, but not trusted for login until totpEnabled is true
+  totpEnabled   Boolean  @default(false) // only true once the admin has confirmed a real code against totpSecret
+  createdAt     DateTime @default(now())
 }
 
 model Lawyer {

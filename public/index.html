@@ -1572,6 +1572,7 @@
       <button class="dash-tab" id="dashTabBtn-lawyers" onclick="switchDashTab('lawyers',this)">Lawyers</button>
       <button class="dash-tab" id="dashTabBtn-clients" onclick="switchDashTab('clients',this)">Clients</button>
       <button class="dash-tab" id="dashTabBtn-audit" onclick="switchDashTab('audit',this)">Activity log <span class="dash-tab-count" id="dashTabCount-audit">0</span></button>
+      <button class="dash-tab" id="dashTabBtn-security" onclick="switchDashTab('security',this)">Security</button>
       <button class="dash-tab" id="adminsTabBtn" style="display:none" onclick="switchDashTab('admins',this)">Admins</button>
     </div>
 
@@ -1707,6 +1708,33 @@
       <div id="auditList"><div class="audit-empty">No activity yet this session.</div></div>
     </div>
 
+    <!-- SECURITY: 2FA, self-service for the currently signed-in admin -->
+    <div class="dash-panel" id="dashPanel-security">
+      <p class="section-sub" style="margin-bottom:16px">Two-factor authentication for your own admin account, using any TOTP authenticator app (Google Authenticator, Authy, 1Password, etc).</p>
+      <div class="card" style="max-width:480px">
+        <div id="securityStatusLine" style="margin-bottom:14px">Checking status…</div>
+        <div id="security2faSetup" style="display:none">
+          <p class="revision-note" style="margin-top:0">Scan this with your authenticator app, then enter the 6-digit code it shows to confirm.</p>
+          <img id="security2faQr" style="width:180px;height:180px;display:block;margin:0 auto 10px" alt="2FA QR code">
+          <p class="revision-note" style="text-align:center">Can't scan? Enter this key manually: <span class="mono" id="security2faSecret"></span></p>
+          <div class="field" style="margin-top:10px">
+            <label for="security2faConfirmCode">Code from your app</label>
+            <input type="text" id="security2faConfirmCode" inputmode="numeric" maxlength="6" placeholder="000000">
+          </div>
+          <button class="btn btn-primary" style="margin-top:10px" onclick="confirm2faSetup()">Confirm &amp; enable</button>
+        </div>
+        <div id="security2faDisable" style="display:none">
+          <div class="field" style="margin-top:10px">
+            <label for="security2faDisableCode">Enter a current code to disable 2FA</label>
+            <input type="text" id="security2faDisableCode" inputmode="numeric" maxlength="6" placeholder="000000">
+          </div>
+          <button class="btn btn-ghost" style="margin-top:10px;border-color:var(--brick);color:var(--brick)" onclick="disable2fa()">Disable 2FA</button>
+        </div>
+        <button class="btn btn-primary" id="security2faStartBtn" style="display:none" onclick="start2faSetup()">Set up 2FA</button>
+        <p class="revision-note" id="securityActionNote" style="margin-top:10px"></p>
+      </div>
+    </div>
+
     <!-- ADMIN ACCOUNTS (superadmin only) -->
     <div class="dash-panel" id="dashPanel-admins">
       <p class="section-sub" style="margin-bottom:16px">Only a superadmin can create new admin accounts. Everyone else signs in with their own username and password, there's no shared login for day-to-day use once you've added real accounts here.</p>
@@ -1766,7 +1794,7 @@
     <button class="close-x" onclick="closeAdminGate()" aria-label="Close">×</button>
   </div>
   <div class="admin-body">
-    <div class="gate-wrap">
+    <div class="gate-wrap" id="gateStep1">
       <div class="field" style="margin-bottom:14px">
         <label for="gateUser">Admin username</label>
         <input type="text" id="gateUser" autocomplete="off" placeholder="Username">
@@ -1778,6 +1806,16 @@
       <p class="otp-error" id="gateError">Incorrect username or password. Try again.</p>
       <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="submitAdminGate()">Sign in to admin</button>
       <div class="gate-note">Real server-side session. Superadmin accounts can create further admin accounts from the Admins tab once signed in.</div>
+    </div>
+    <div class="gate-wrap" id="gateStep2" style="display:none">
+      <p class="section-sub" style="margin-top:0">Enter the 6-digit code from your authenticator app.</p>
+      <div class="field" style="margin-bottom:6px">
+        <label for="gateTotpCode">Authenticator code</label>
+        <input type="text" id="gateTotpCode" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="000000" onkeydown="if(event.key==='Enter'){submitAdminTotp();}">
+      </div>
+      <p class="otp-error" id="gateTotpError">Incorrect code. Try again.</p>
+      <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="submitAdminTotp()">Verify &amp; sign in</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="cancelAdminTotp()">Back</button>
     </div>
   </div>
 </div>
@@ -3931,6 +3969,7 @@
     if(name === 'tickets') loadAdminSupportTickets();
     if(name === 'lawyers') loadAdminAllLawyers();
     if(name === 'clients') loadAdminClients();
+    if(name === 'security') loadAdminSecurity();
   }
 
   // ============== ACCESSIBILITY: auto-associate labels with their control ==============
@@ -3955,33 +3994,64 @@
     document.getElementById('gateError').classList.remove('show');
     document.getElementById('gateUser').value = '';
     document.getElementById('gatePass').value = '';
+    document.getElementById('gateStep1').style.display = 'block';
+    document.getElementById('gateStep2').style.display = 'none';
     openModal('gateModal','gateOverlay');
   }
   function closeAdminGate(){
     closeModalGeneric('gateModal','gateOverlay');
   }
+  function finishAdminLogin(res){
+    adminToken = res.token;
+    currentAdminRole = res.admin ? res.admin.role : null;
+    document.getElementById('adminsTabBtn').style.display = currentAdminRole === 'superadmin' ? '' : 'none';
+    closeAdminGate();
+    go('admin');
+    loadAdminVerifyQueue();
+    loadAdminDraftQueue();
+    loadAdminSupportTickets();
+    loadAdminAuditLog();
+    showToast('Signed in, this is a real backend session, not a client-side check.');
+  }
+  let adminTotpTempToken = null;
   async function submitAdminGate(){
     const u = document.getElementById('gateUser').value.trim();
     const p = document.getElementById('gatePass').value;
     const errEl = document.getElementById('gateError');
     try{
       const res = await api('/auth/admin-login', { method:'POST', body:{ username:u, password:p } });
-      adminToken = res.token;
-      currentAdminRole = res.admin ? res.admin.role : null;
-      document.getElementById('adminsTabBtn').style.display = currentAdminRole === 'superadmin' ? '' : 'none';
-      closeAdminGate();
-      go('admin');
-      loadAdminVerifyQueue();
-      loadAdminDraftQueue();
-      loadAdminSupportTickets();
-      loadAdminAuditLog();
-      showToast('Signed in, this is a real backend session, not a client-side check.');
+      if(res.requiresTotp){
+        adminTotpTempToken = res.tempToken;
+        document.getElementById('gateStep1').style.display = 'none';
+        document.getElementById('gateStep2').style.display = 'block';
+        document.getElementById('gateTotpCode').value = '';
+        document.getElementById('gateTotpError').classList.remove('show');
+        document.getElementById('gateTotpCode').focus();
+        return;
+      }
+      finishAdminLogin(res);
     }catch(e){
       errEl.textContent = e.message === 'Failed to fetch'
         ? "Can't reach the backend right now, check that it's running, then try again."
         : (e.message || 'Incorrect username or password.');
       errEl.classList.add('show');
     }
+  }
+  async function submitAdminTotp(){
+    const code = document.getElementById('gateTotpCode').value.trim();
+    const errEl = document.getElementById('gateTotpError');
+    try{
+      const res = await api('/auth/admin-login/totp', { method:'POST', body:{ tempToken: adminTotpTempToken, code } });
+      finishAdminLogin(res);
+    }catch(e){
+      errEl.textContent = e.message || 'Incorrect code.';
+      errEl.classList.add('show');
+    }
+  }
+  function cancelAdminTotp(){
+    adminTotpTempToken = null;
+    document.getElementById('gateStep1').style.display = 'block';
+    document.getElementById('gateStep2').style.display = 'none';
   }
 
   // ============== LAWYER LOGIN GATE (real OTP session, phone must belong to a verified lawyer) ==============
@@ -4263,6 +4333,66 @@
         </tr>`).join('');
     }catch(e){
       tbody.innerHTML = `<tr><td colspan="3">Couldn't load admin accounts: ${e.message || 'unknown error'}</td></tr>`;
+    }
+  }
+
+  // SECURITY: 2FA self-service for the signed-in admin
+  function resetSecurityPanel(){
+    document.getElementById('security2faSetup').style.display = 'none';
+    document.getElementById('security2faDisable').style.display = 'none';
+    document.getElementById('security2faStartBtn').style.display = 'none';
+    document.getElementById('securityActionNote').textContent = '';
+  }
+  async function loadAdminSecurity(){
+    resetSecurityPanel();
+    const line = document.getElementById('securityStatusLine');
+    line.textContent = 'Checking status…';
+    try{
+      const status = await api('/admin/2fa/status', { admin:true });
+      if(status.enabled){
+        line.innerHTML = '<strong style="color:var(--sage)">2FA is on</strong> for your account.';
+        document.getElementById('security2faDisable').style.display = 'block';
+      } else {
+        line.innerHTML = '<strong style="color:var(--brick)">2FA is off</strong> for your account.';
+        document.getElementById('security2faStartBtn').style.display = 'inline-block';
+      }
+    }catch(e){
+      line.textContent = "Couldn't check your 2FA status right now.";
+    }
+  }
+  async function start2faSetup(){
+    const note = document.getElementById('securityActionNote');
+    try{
+      const res = await api('/admin/2fa/setup', { method:'POST', admin:true });
+      document.getElementById('security2faQr').src = res.qrCodeDataUri;
+      document.getElementById('security2faSecret').textContent = res.secret;
+      document.getElementById('security2faConfirmCode').value = '';
+      document.getElementById('security2faSetup').style.display = 'block';
+      document.getElementById('security2faStartBtn').style.display = 'none';
+    }catch(e){
+      note.textContent = e.message || 'Could not start 2FA setup.';
+    }
+  }
+  async function confirm2faSetup(){
+    const code = document.getElementById('security2faConfirmCode').value.trim();
+    const note = document.getElementById('securityActionNote');
+    try{
+      await api('/admin/2fa/confirm', { method:'POST', admin:true, body:{ code } });
+      showToast('2FA is now enabled on your account.');
+      loadAdminSecurity();
+    }catch(e){
+      note.textContent = e.message || 'Incorrect code.';
+    }
+  }
+  async function disable2fa(){
+    const code = document.getElementById('security2faDisableCode').value.trim();
+    const note = document.getElementById('securityActionNote');
+    try{
+      await api('/admin/2fa/disable', { method:'POST', admin:true, body:{ code } });
+      showToast('2FA has been disabled on your account.');
+      loadAdminSecurity();
+    }catch(e){
+      note.textContent = e.message || 'Incorrect code.';
     }
   }
   async function createAdmin(){

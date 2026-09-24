@@ -1,9 +1,11 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const path = require('path');
+const QRCode = require('qrcode');
 const { prisma, serializeLawyer } = require('../prisma');
 const { requireAdmin, requireSuperAdmin } = require('../middleware/auth');
 const { logAudit } = require('../services/auditLog');
+const { generateTotpSecret, generateTotpUri, verifyTotpCode } = require('../services/totp');
 
 const router = express.Router();
 
@@ -236,6 +238,63 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
   }
   await prisma.user.delete({ where: { id: user.id } });
   logAudit('no', `Client profile "${user.name || user.phone}" deleted by admin "${req.admin.username}"`);
+  res.json({ ok: true });
+});
+
+/**
+ * Two-factor auth for admin/superadmin accounts (TOTP, Google
+ * Authenticator/Authy compatible) - self-service, an admin manages their
+ * own. A superadmin can create other admins and approve lawyers, so this
+ * tier warrants stronger auth than username/password alone.
+ */
+
+/** GET /api/admin/2fa/status — whether 2FA is enabled on my own account */
+router.get('/2fa/status', requireAdmin, async (req, res) => {
+  const admin = await prisma.admin.findUnique({ where: { id: req.admin.sub } });
+  if (!admin) return res.status(404).json({ error: 'Not found' });
+  res.json({ enabled: admin.totpEnabled });
+});
+
+/**
+ * POST /api/admin/2fa/setup — generates a new secret and a scannable QR
+ * code. Saves the secret immediately but does NOT enable 2FA yet - login
+ * only starts requiring a code once /2fa/confirm proves the admin can
+ * actually generate a valid one, so a botched setup can't lock anyone out.
+ */
+router.post('/2fa/setup', requireAdmin, async (req, res) => {
+  try {
+    const admin = await prisma.admin.findUnique({ where: { id: req.admin.sub } });
+    if (!admin) return res.status(404).json({ error: 'Not found' });
+    const secret = generateTotpSecret();
+    await prisma.admin.update({ where: { id: admin.id }, data: { totpSecret: secret, totpEnabled: false } });
+    const otpauth = generateTotpUri(admin.username, secret);
+    const qrCodeDataUri = await QRCode.toDataURL(otpauth);
+    res.json({ secret, qrCodeDataUri });
+  } catch (err) {
+    console.error('POST /api/admin/2fa/setup failed:', err);
+    res.status(500).json({ error: 'Could not start 2FA setup right now' });
+  }
+});
+
+/** POST /api/admin/2fa/confirm  { code } — proves the authenticator app works, then actually enables 2FA */
+router.post('/2fa/confirm', requireAdmin, async (req, res) => {
+  const { code } = req.body || {};
+  const admin = await prisma.admin.findUnique({ where: { id: req.admin.sub } });
+  if (!admin || !admin.totpSecret) return res.status(400).json({ error: 'Start 2FA setup first' });
+  if (!verifyTotpCode(admin.totpSecret, code)) return res.status(400).json({ error: 'Incorrect code' });
+  await prisma.admin.update({ where: { id: admin.id }, data: { totpEnabled: true } });
+  logAudit('ok', `2FA enabled for admin "${admin.username}"`);
+  res.json({ ok: true });
+});
+
+/** POST /api/admin/2fa/disable  { code } — requires a valid current code, so a stolen session token alone can't turn it off */
+router.post('/2fa/disable', requireAdmin, async (req, res) => {
+  const { code } = req.body || {};
+  const admin = await prisma.admin.findUnique({ where: { id: req.admin.sub } });
+  if (!admin || !admin.totpEnabled) return res.status(400).json({ error: '2FA is not enabled' });
+  if (!verifyTotpCode(admin.totpSecret, code)) return res.status(400).json({ error: 'Incorrect code' });
+  await prisma.admin.update({ where: { id: admin.id }, data: { totpEnabled: false, totpSecret: null } });
+  logAudit('no', `2FA disabled for admin "${admin.username}"`);
   res.json({ ok: true });
 });
 

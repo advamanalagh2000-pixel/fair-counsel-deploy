@@ -1,9 +1,11 @@
 const express = require('express');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const { prisma, serializeLawyer } = require('../prisma');
 const { sendOtp } = require('../services/smsProvider');
-const { signSession, requireAuth } = require('../middleware/auth');
+const { signSession, requireAuth, JWT_SECRET } = require('../middleware/auth');
+const { verifyTotpCode } = require('../services/totp');
 const { otpSendLimiter, loginLimiter } = require('../middleware/rateLimit');
 const { logAudit } = require('../services/auditLog');
 
@@ -176,8 +178,36 @@ router.post('/admin-login', loginLimiter, async (req, res) => {
     logAudit('no', `Failed admin login attempt for username "${username}"`);
     return res.status(401).json({ error: 'Incorrect username or password' });
   }
+  if (admin.totpEnabled) {
+    // Not a real session yet - role is deliberately not 'admin', so this
+    // token can't pass requireAdmin even if it leaked, it's only good for
+    // the /admin-login/totp exchange below, and only for 5 minutes.
+    const tempToken = signSession({ sub: admin.id, role: 'admin-pending-2fa' }, '5m');
+    return res.json({ requiresTotp: true, tempToken });
+  }
   const token = signSession({ sub: admin.id, role: 'admin', adminRole: admin.role, username: admin.username }, '8h');
   logAudit('ok', `Admin "${admin.username}" signed in`);
+  res.json({ token, admin: { username: admin.username, role: admin.role } });
+});
+
+/** POST /api/auth/admin-login/totp  { tempToken, code } — second step when 2FA is enabled */
+router.post('/admin-login/totp', loginLimiter, async (req, res) => {
+  const { tempToken, code } = req.body || {};
+  let payload;
+  try {
+    payload = jwt.verify(tempToken, JWT_SECRET);
+  } catch {
+    return res.status(401).json({ error: 'Login session expired, sign in again' });
+  }
+  if (payload.role !== 'admin-pending-2fa') return res.status(401).json({ error: 'Invalid login session' });
+  const admin = await prisma.admin.findUnique({ where: { id: payload.sub } });
+  if (!admin || !admin.totpEnabled || !admin.totpSecret) return res.status(401).json({ error: 'Invalid login session' });
+  if (!verifyTotpCode(admin.totpSecret, code)) {
+    logAudit('no', `Failed 2FA code for admin "${admin.username}"`);
+    return res.status(401).json({ error: 'Incorrect code' });
+  }
+  const token = signSession({ sub: admin.id, role: 'admin', adminRole: admin.role, username: admin.username }, '8h');
+  logAudit('ok', `Admin "${admin.username}" signed in (2FA)`);
   res.json({ token, admin: { username: admin.username, role: admin.role } });
 });
 
