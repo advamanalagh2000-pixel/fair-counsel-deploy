@@ -1241,7 +1241,7 @@
                 <button class="btn btn-primary" id="downloadPdfBtn" disabled title="Sign the document first" onclick="simulateDownload(this,'PDF')" data-i18n="downloadPdfBtn">Download draft (PDF)</button>
                 <button class="btn btn-primary" id="downloadWordBtn" disabled title="Sign the document first" onclick="simulateDownload(this,'Word doc')" data-i18n="downloadWordBtn">Download draft (Word doc)</button>
                 <button class="btn btn-ghost" data-i18n="requestRevisionBtn">Request revision, free (1 of 1)</button>
-                <button class="btn btn-ghost" id="gstBtn" onclick="downloadInvoice()" data-i18n="downloadInvoiceBtn">Download GST invoice</button>
+                <button class="btn btn-ghost" id="gstBtn" onclick="downloadInvoiceFor(lastFinalPaymentId, this)" data-i18n="downloadInvoiceBtn">Download GST invoice</button>
               </div>
               <p class="revision-note" data-i18n="secondRevisionNote">A second revision is available for an additional fee, quoted by your lawyer.</p>
 
@@ -1777,7 +1777,7 @@
   <div class="admin-body" id="ticketBody">
     <div class="field" style="margin-bottom:14px">
       <label>Related file</label>
-      <input type="text" value="FILE FC/2026/00142" readonly style="background:var(--paper-2)">
+      <input type="text" id="ticketFileCode" value="" readonly style="background:var(--paper-2)">
     </div>
     <div class="field" style="margin-bottom:14px">
       <label>Subject</label>
@@ -2017,9 +2017,7 @@
   const STEP_LABELS = [
     {id:'shortlist', label:'Browse', key:'stepShortlist'},
     {id:'booking', label:'Book', key:'stepBook'},
-    {id:'payment', label:'Pay', key:'stepPay'},
-    {id:'quote', label:'Quote', key:'stepQuote'},
-    {id:'tracker', label:'Track', key:'stepTrack'}
+    {id:'payment', label:'Pay', key:'stepPay'}
   ];
   let currentIndex = 0;
   // The furthest step the client has actually reached in this session, not
@@ -2427,19 +2425,33 @@
         return;
       }
       list.innerHTML = cases.map(c=>{
-        const meta = MY_CASE_STATUS_LABEL[c.status] || { label: c.status, cls: 'status-wait' };
+        let meta = MY_CASE_STATUS_LABEL[c.status] || { label: c.status, cls: 'status-wait' };
+        // in_review covers two real different things (advance still owed vs.
+        // final still owed) - say which, instead of a vague "In progress".
+        if(c.status === 'in_review' && c.stage === 'advance') meta = { label: 'Advance payment due', cls: 'status-wait' };
+        if(c.status === 'in_review' && c.stage === 'final') meta = { label: 'Final payment due', cls: 'status-wait' };
         const pillStyle = meta.closedStyle ? ' style="background:var(--sage-l);color:var(--sage)"' : '';
         const lawyerName = c.lawyer?.name || '';
         let reviewBit = '';
+        let invoiceBit = '';
         if(c.status === 'closed'){
           reviewBit = c.review
             ? `<span class="mono" style="font-size:12px;color:var(--brass)" title="Your rating">${'★'.repeat(c.review.rating)}${'☆'.repeat(5-c.review.rating)}</span>`
             : `<button class="btn btn-ghost" style="padding:8px 14px;font-size:12.5px" onclick="openReviewModal('${c.id}','${lawyerName.replace(/'/g,"\\'")}','${c.fileCode}')">Rate this lawyer</button>`;
+          if(c.finalPaymentId){
+            invoiceBit = `<button class="btn btn-ghost" style="padding:8px 14px;font-size:12.5px" onclick="downloadInvoiceFor('${c.finalPaymentId}',this)">Download GST invoice</button>`;
+          }
+        }
+        let payBit = '';
+        if(c.status === 'in_review' && c.stage === 'advance'){
+          payBit = `<button class="btn btn-brass" style="padding:8px 14px;font-size:12.5px" onclick="payStageFromMyCases('${c.id}','${c.fileCode}','advance',400000,this)">Pay advance, ₹4,000</button>`;
+        } else if(c.status === 'in_review' && c.stage === 'final'){
+          payBit = `<button class="btn btn-brass" style="padding:8px 14px;font-size:12.5px" onclick="payStageFromMyCases('${c.id}','${c.fileCode}','final',150000,this)">Pay final, ₹1,500</button>`;
         }
         return `
         <div class="mycase-row">
           <div><div class="req-row-title">FILE ${c.fileCode}, ${c.category}</div><div class="req-row-sub">${lawyerName ? `With ${lawyerName} · ` : ''}Stage: ${c.stage}</div></div>
-          <div style="display:flex;gap:8px;align-items:center"><button class="btn btn-ghost" style="padding:8px 14px;font-size:12.5px" onclick="openMessagesModal('${c.id}','${c.fileCode}','user')">Messages</button>${reviewBit}<span class="status-pill ${meta.cls}"${pillStyle}>${meta.label}</span><button class="btn btn-ghost" style="padding:8px 14px;font-size:12.5px" onclick="go('tracker')">View</button></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${payBit}<button class="btn btn-ghost" style="padding:8px 14px;font-size:12.5px" onclick="openMessagesModal('${c.id}','${c.fileCode}','user')">Messages</button>${reviewBit}${invoiceBit}<span class="status-pill ${meta.cls}"${pillStyle}>${meta.label}</span></div>
         </div>`;
       }).join('');
     }catch(e){
@@ -2898,8 +2910,6 @@
     ofWord: { en: `of`, hi: `में से` },
     stepBook: { en: `Book`, hi: `बुक करें` },
     stepPay: { en: `Pay`, hi: `भुगतान` },
-    stepQuote: { en: `Quote`, hi: `कोटेशन` },
-    stepTrack: { en: `Track`, hi: `ट्रैक करें` },
     individualChange: { en: `Individual · change`, hi: `व्यक्तिगत · बदलें` },
     companyChange: { en: `Company`, hi: `कंपनी` },
     planWord: { en: `plan`, hi: `योजना` },
@@ -3392,14 +3402,12 @@
   }
 
   // GST INVOICE
-  async function downloadInvoice(){
-    const btn = document.getElementById('gstBtn');
-    if(!lastFinalPaymentId){ showToast('Complete the final payment first to get your invoice.'); return; }
+  async function downloadInvoiceFor(paymentId, btn){
     const originalText = btn.textContent;
     btn.textContent = 'Preparing invoice…';
     btn.disabled = true;
     try{
-      const res = await fetch(API_BASE + '/payments/' + lastFinalPaymentId + '/invoice', {
+      const res = await fetch(API_BASE + '/payments/' + paymentId + '/invoice', {
         headers: { Authorization: 'Bearer ' + authToken }
       });
       if(!res.ok) throw new Error('Invoice download failed');
@@ -3988,6 +3996,30 @@
     }
   }
 
+  // Advance/final payment, triggered directly from a case row in My Cases -
+  // this used to only be reachable via the old scripted tracker/quote
+  // screens, which meant a real case had no way to actually get past
+  // consultation once that screen was removed. Reuses the same real
+  // payViaBackend() call the original booking flow uses.
+  async function payStageFromMyCases(caseId, fileCode, stage, amountPaise, btn){
+    currentCaseId = caseId;
+    currentCaseFileCode = fileCode;
+    btn.disabled = true;
+    const originalText = btn.textContent;
+    btn.textContent = 'Processing…';
+    const result = await payViaBackend(stage, amountPaise);
+    if(!result.ok){
+      btn.disabled = false;
+      btn.textContent = originalText;
+      if(!result.cancelled){
+        showToast((result.error && result.error.message) || 'Payment could not be confirmed. Nothing was charged.');
+      }
+      return;
+    }
+    showToast(`${stage === 'advance' ? 'Advance' : 'Final'} payment received.`);
+    loadMyCases();
+  }
+
   async function payNow(){
     const fee = currentFee();
     const result = await payViaBackend('consultation', fee * 100);
@@ -4003,7 +4035,7 @@
     const tr = (key)=>{ const e = I18N_DICT[key]; return e ? (e[shortLang] !== undefined ? e[shortLang] : e.en) : key; };
     const tl1 = document.getElementById('tl1Desc');
     if(tl1) tl1.textContent = consultChannel === 'video' ? tr('tl1dVideo') : tr('tl1dPhone');
-    setTimeout(()=>go('tracker'), 500);
+    setTimeout(()=>goMyCases(), 500);
   }
 
   function setQuoteTab(tab){
@@ -4033,7 +4065,7 @@
     document.getElementById('tlAdvanceDesc').textContent = 'Advance paid. Adv. Kulkarni is preparing your documents.';
     document.getElementById('tlReview').classList.add('active');
     showToast(`Advance payment received via ${lastPayMethodLabel}.`);
-    go('tracker');
+    goMyCases();
   }
 
   let lastFinalPaymentId = null;
@@ -4871,6 +4903,7 @@
 
   // TICKETS
   function openTicket(){
+    document.getElementById('ticketFileCode').value = currentCaseFileCode ? 'FILE ' + currentCaseFileCode : 'No case selected yet';
     openModal('ticketModal','ticketOverlay');
   }
   function closeTicket(){

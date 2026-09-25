@@ -46,9 +46,13 @@ router.get('/mine', requireAuth, async (req, res) => {
   const cases = await prisma.case.findMany({
     where: { clientId: req.user.sub },
     orderBy: { createdAt: 'desc' },
-    include: { review: true, lawyer: { select: { name: true } } }
+    include: {
+      review: true,
+      lawyer: { select: { name: true } },
+      payments: { where: { stage: 'final', status: 'paid' }, select: { id: true } }
+    }
   });
-  res.json(cases);
+  res.json(cases.map(({ payments, ...c }) => ({ ...c, finalPaymentId: payments[0]?.id || null })));
 });
 
 function canViewCase(user, c) {
