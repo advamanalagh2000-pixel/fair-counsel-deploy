@@ -1879,6 +1879,23 @@
   </div>
 </div>
 
+<!-- PLAN CONFIRMATION MODAL -->
+<div class="overlay-bg" id="planConfirmOverlay" onclick="closePlanConfirm()"></div>
+<div class="admin-panel" id="planConfirmModal">
+  <div class="admin-head">
+    <h3 class="serif">Plan selected: <span id="planConfirmName"></span></h3>
+    <button class="close-x" onclick="closePlanConfirm()">×</button>
+  </div>
+  <div class="admin-body">
+    <div class="pending-box" style="background:var(--sage-l);border-color:#cfe0cb">
+      <div id="planConfirmPrice" style="font-weight:600"></div>
+    </div>
+    <ul id="planConfirmFeatures" style="margin:14px 0;padding-left:18px;font-size:13.5px;line-height:1.8"></ul>
+    <p class="revision-note" id="planConfirmNote"></p>
+    <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="closePlanConfirm();enterSearch()">Continue to find a lawyer →</button>
+  </div>
+</div>
+
 <!-- MESSAGES MODAL (case-scoped thread between client and lawyer) -->
 <div class="overlay-bg" id="messagesOverlay" onclick="closeMessagesModal()"></div>
 <div class="admin-panel" id="messagesModal">
@@ -2103,7 +2120,29 @@
   function confirmCompany(subscribe){
     companyPlan = subscribe ? (selectedPlan || 'growth') : 'payg';
     saveState();
-    enterSearch();
+    if(subscribe){
+      showPlanConfirm(companyPlan);
+    } else {
+      enterSearch();
+    }
+  }
+
+  // Confirms the plan choice itself before moving on - previously this just
+  // silently jumped straight to browsing lawyers with no acknowledgement of
+  // what was picked. Note: no real billing happens here yet, and the copy
+  // says so rather than implying a charge went through.
+  function showPlanConfirm(plan){
+    const card = document.getElementById('planCard-'+plan);
+    document.getElementById('planConfirmName').textContent = card.querySelector('.plan-name').textContent;
+    document.getElementById('planConfirmPrice').textContent = card.querySelector('.plan-price').textContent;
+    document.getElementById('planConfirmFeatures').innerHTML = card.querySelector('.plan-list').innerHTML;
+    document.getElementById('planConfirmNote').textContent = plan === 'enterprise'
+      ? "This is a custom plan, Fair Counsel will reach out to set up your Enterprise pricing and billing. You can start finding a lawyer in the meantime."
+      : "Billing for this plan isn't live yet, Fair Counsel will follow up to set up your subscription invoice. You can start finding a lawyer in the meantime.";
+    openModal('planConfirmModal','planConfirmOverlay');
+  }
+  function closePlanConfirm(){
+    closeModalGeneric('planConfirmModal','planConfirmOverlay');
   }
 
   let loggedIn = false;
