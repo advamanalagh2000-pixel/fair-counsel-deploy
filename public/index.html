@@ -626,7 +626,7 @@
 
       <div class="intro-cta-row">
         <button class="btn btn-brass" onclick="go('entry')" data-i18n="getStarted">Get started →</button>
-        <button class="btn btn-ghost" onclick="go('search')" data-i18n="justBrowse">Just browse lawyers first</button>
+        <button class="btn btn-ghost" onclick="showClientStepper();browseLawyers()" data-i18n="justBrowse">Just browse lawyers first</button>
         <button class="btn btn-ghost" onclick="go('freequestion')" data-i18n="freeQTeaserBtn" style="border-color:var(--sage);color:var(--sage)">Ask for free →</button>
       </div>
 
@@ -898,7 +898,8 @@
   <!-- SCREEN 3: SHORTLIST -->
   <section class="screen" id="screen-shortlist">
     <h2 class="section-title serif" data-i18n="shortlistH2">Matching lawyers</h2>
-    <p class="section-sub" data-i18n="shortlistSub">These lawyers specialise in what you need. Request one. Fair Counsel reviews every request before it's confirmed.</p>
+    <p class="section-sub" id="shortlistSubText">These lawyers specialise in what you need. Request one. Fair Counsel reviews every request before it's confirmed.</p>
+    <p style="margin:-10px 0 18px;font-size:12.5px"><a href="#" onclick="go('search');return false;" style="color:var(--navy)" data-i18n="describeInsteadLink">Prefer to describe your situation instead? →</a></p>
 
     <div class="results-toolbar">
       <div class="results-count" id="resultsCount" aria-live="polite"></div>
@@ -1416,7 +1417,7 @@
 
     <div class="dash-panel on" id="mcPanel-cases">
       <div id="mcCasesList"></div>
-      <button class="btn btn-primary" style="margin-top:20px" onclick="go('search')" data-i18n="startNewCaseBtn">+ Start a new case</button>
+      <button class="btn btn-primary" style="margin-top:20px" onclick="browseLawyers()" data-i18n="startNewCaseBtn">+ Start a new case</button>
     </div>
 
     <div class="dash-panel" id="mcPanel-docs">
@@ -1442,7 +1443,7 @@
         <h2 class="section-title serif" style="margin-bottom:4px">Admin Dashboard</h2>
         <p class="section-sub" style="margin-bottom:0">Fair Counsel operations overview</p>
       </div>
-      <button class="btn btn-ghost" onclick="go('search')">← Exit admin view</button>
+      <button class="btn btn-ghost" onclick="browseLawyers()">← Exit admin view</button>
     </div>
 
     <div class="dash-stats">
@@ -2013,8 +2014,7 @@
   }
 
   const STEP_LABELS = [
-    {id:'search', label:'Search', key:'stepSearch'},
-    {id:'shortlist', label:'Shortlist', key:'stepShortlist'},
+    {id:'shortlist', label:'Browse', key:'stepShortlist'},
     {id:'booking', label:'Book', key:'stepBook'},
     {id:'payment', label:'Pay', key:'stepPay'},
     {id:'quote', label:'Quote', key:'stepQuote'},
@@ -2140,11 +2140,21 @@
   // verification is required later, when a client requests an appointment
   // with a specific lawyer (see requireVerification() calls on the
   // "Request Appointment" buttons).
+  // With only a handful of lawyers on the platform, a search/filter step
+  // before seeing anyone added friction without adding value - clients now
+  // land straight on the full (unfiltered) list of verified lawyers.
+  // "Describe your situation" (Fair Counsel Assist) still exists as an
+  // optional path, reachable via a link on that browse screen.
+  function browseLawyers(){
+    activeFilters = null;
+    currentPage = 1;
+    saveState();
+    go('shortlist', true);
+  }
   function enterSearch(){
     showClientStepper();
     updateTypeBadge();
-    saveState();
-    go('search');
+    browseLawyers();
   }
 
   // Shows the "Verify your phone number" screen. Call requireVerification() instead of this directly.
@@ -2276,7 +2286,7 @@
           pendingVerifyAction = null;
           fn();
         } else {
-          go('search');
+          browseLawyers();
         }
       }catch(e){
         boxes.forEach(b=>{ b.classList.add('err'); b.value=''; });
@@ -2322,7 +2332,7 @@
       pendingVerifyAction = null;
       fn();
     } else {
-      go('search');
+      browseLawyers();
     }
   }
 
@@ -2856,7 +2866,6 @@
     spec_nclt___nclat_practice: { en: `NCLT & NCLAT Practice`, hi: `एनसीएलटी एवं एनसीएलएटी प्रैक्टिस` },
     spec_high_court___supreme_court_litigation: { en: `High Court & Supreme Court Litigation`, hi: `उच्च न्यायालय एवं उच्चतम न्यायालय वाद` },
     spec_tribunal___quasi_judicial_proceedings: { en: `Tribunal & Quasi-Judicial Proceedings`, hi: `अधिकरण एवं अर्ध-न्यायिक कार्यवाही` },
-    stepSearch: { en: `Search`, hi: `खोजें` },
     mostUsed: { en: `MOST USED`, hi: `सबसे ज़्यादा उपयोग` },
     upiAppsHint: { en: `GPay, PhonePe, Paytm & more`, hi: `GPay, PhonePe, Paytm और अन्य` },
     cardLabel: { en: `Card`, hi: `कार्ड` },
@@ -2868,7 +2877,7 @@
     selectBankLabel: { en: `Select your bank`, hi: `अपना बैंक चुनें` },
     seeConfirmMsg: { en: `See the confirmation message you'll receive`, hi: `आपको मिलने वाला पुष्टिकरण संदेश देखें` },
     seeMsg: { en: `See the message you'll receive`, hi: `आपको मिलने वाला संदेश देखें` },
-    stepShortlist: { en: `Shortlist`, hi: `शॉर्टलिस्ट` },
+    stepShortlist: { en: `Browse`, hi: `ब्राउज़ करें` },
     clientsFave: { en: `Client's fave`, hi: `ग्राहकों की पसंद` },
     verifiedBadge: { en: `Verified`, hi: `सत्यापित` },
     showMoreDetails: { en: `Show more details`, hi: `और विवरण देखें` },
@@ -3005,6 +3014,7 @@
     sensitiveNotice: { en: `<strong>This looks like a sensitive matter.</strong> Details you share here are visible only to your assigned lawyer and the Fair Counsel reviewer who checks drafts before they reach you, never to other clients or lawyers on the platform.`, hi: `<strong>यह एक संवेदनशील मामला लगता है।</strong> यहाँ साझा किए गए विवरण केवल आपके नियुक्त वकील और फेयर काउंसल के समीक्षक को दिखाई देते हैं, जो आप तक पहुँचने से पहले ड्राफ्ट जांचते हैं, प्लेटफ़ॉर्म के अन्य ग्राहकों या वकीलों को कभी नहीं।`, html:true },
     shortlistH2: { en: `Matching lawyers`, hi: `मिलते-जुलते वकील` },
     shortlistSub: { en: `These lawyers specialise in what you need. Request one. Fair Counsel reviews every request before it's confirmed.`, hi: `ये वकील आपकी ज़रूरत में विशेषज्ञ हैं। किसी एक का अनुरोध करें। फेयर काउंसल पुष्टि से पहले हर अनुरोध की समीक्षा करता है।` },
+    describeInsteadLink: { en: `Prefer to describe your situation instead? →`, hi: `इसके बजाय अपनी स्थिति बताना चाहेंगे? →` },
     sortByLabel: { en: `Sort by`, hi: `इसके अनुसार क्रमबद्ध करें` },
     sortRec: { en: `Recommended`, hi: `अनुशंसित` },
     sortExp: { en: `Most experienced`, hi: `सबसे अनुभवी` },
@@ -3519,15 +3529,15 @@
       document.getElementById('chatTyping').style.display = 'none';
       const errEl = document.getElementById('chatErrorMsg');
       errEl.textContent = e.name === 'AbortError'
-        ? "This is taking longer than expected. You can search with filters instead, it's just as fast."
-        : "Couldn't match your case right now. You can search with filters instead.";
+        ? "This is taking longer than expected. You can browse all our verified lawyers instead."
+        : "Couldn't match your case right now. You can browse all our verified lawyers instead.";
       errEl.style.display = 'block';
       const btn = document.createElement('button');
       btn.className = 'btn btn-ghost btn-continue-chat';
       btn.style.marginTop = '4px';
       btn.style.alignSelf = 'flex-start';
-      btn.textContent = 'Search by filters instead';
-      btn.onclick = ()=> go('search');
+      btn.textContent = 'Browse all lawyers';
+      btn.onclick = ()=> browseLawyers();
       body.appendChild(btn);
       return;
     }
@@ -3677,6 +3687,18 @@
     const sortSelect = document.getElementById('sortSelect');
     if(sortSelect) sortSelect.value = sortBy;
 
+    // Two different stories depending on how the client got here: a real
+    // match (via Fair Counsel Assist) vs. just browsing everyone, since
+    // there's no filter form anymore to have narrowed things down.
+    const isMatched = activeFilters && Object.values(activeFilters).some(v => v && v !== 'Any');
+    const subEl = document.getElementById('shortlistSubText');
+    if(subEl){
+      const shortLangSub = currentLang === 'HI' ? 'hi' : 'en';
+      subEl.textContent = isMatched
+        ? (I18N_DICT.shortlistSub[shortLangSub] || I18N_DICT.shortlistSub.en)
+        : (shortLangSub==='hi' ? 'फेयर काउंसल पर हर सत्यापित वकील। सीधे अनुरोध करें, या अपनी स्थिति बताएं और हम इसे और सटीक बनाएंगे।' : "Every verified lawyer on Fair Counsel. Request one directly, or describe your situation and we'll narrow it down.");
+    }
+
     let totalPages, pageResults, total;
     try{
       const data = await fetchLawyersFromBackend();
@@ -3698,9 +3720,9 @@
       countEl.textContent = '';
       pager.style.display = 'none';
       const shortLang0 = currentLang === 'HI' ? 'hi' : 'en';
-      const noMatchTitle = shortLang0==='hi' ? 'अभी उन फ़िल्टर से कोई वकील नहीं मिला' : 'No lawyers match those filters yet';
-      const noMatchBody = shortLang0==='hi' ? 'अपनी खोज को विस्तृत करें, या वेटलिस्ट में शामिल हों और जब कोई मैच मिले तो हम आपको सूचित करेंगे।' : "Try widening your search, or join the waitlist and we'll notify you when someone matches.";
-      const adjustFiltersLabel = shortLang0==='hi' ? 'फ़िल्टर बदलें' : 'Adjust filters';
+      const noMatchTitle = shortLang0==='hi' ? 'अभी कोई सत्यापित वकील उपलब्ध नहीं है' : 'No verified lawyers to show right now';
+      const noMatchBody = shortLang0==='hi' ? 'कृपया थोड़ी देर बाद फिर देखें, या वेटलिस्ट में शामिल हों और जब कोई उपलब्ध हो तो हम आपको सूचित करेंगे।' : "Please check back shortly, or join the waitlist and we'll notify you as soon as someone's available.";
+      const adjustFiltersLabel = shortLang0==='hi' ? 'फिर से देखें' : 'Try again';
       const joinWaitlistLabel = shortLang0==='hi' ? 'वेटलिस्ट में शामिल हों' : 'Join the waitlist';
       const waitlistedMsg = shortLang0==='hi' ? 'आप वेटलिस्ट में शामिल हो गए हैं, हम आपको सूचित करेंगे।' : "You're on the waitlist, we'll notify you.";
       grid.innerHTML = `
@@ -3709,7 +3731,7 @@
           <div style="font-weight:600;color:var(--navy);margin-bottom:6px">${noMatchTitle}</div>
           <div style="font-size:13px;margin-bottom:16px">${noMatchBody}</div>
           <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-            <button class="btn btn-ghost" onclick="activeFilters=null;currentPage=1;saveState();go('search')">${adjustFiltersLabel}</button>
+            <button class="btn btn-ghost" onclick="browseLawyers()">${adjustFiltersLabel}</button>
             <button class="btn btn-primary" onclick="this.closest('.empty-state').innerHTML='<div style=&quot;font-weight:600;color:var(--sage)&quot;>${waitlistedMsg}</div>'">${joinWaitlistLabel}</button>
           </div>
         </div>`;
@@ -4909,7 +4931,7 @@
     lawyerToken = null;
     currentLawyerProfile = null;
     showClientStepper();
-    go('search');
+    browseLawyers();
     refreshNotifDot();
   }
   function goLawyer(id){
