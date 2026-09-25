@@ -598,7 +598,6 @@
         </div>
       </div>
       <button class="admin-toggle" id="lawyerToggleBtn" onclick="enterLawyerPortal()" data-i18n="lawyerView">Careers</button>
-      <button class="admin-toggle" id="adminToggleBtn" onclick="openAdminGate()" data-i18n="adminView" style="display:none">Admin view</button>
     </div>
   </div>
   <div class="stepper" id="clientStepper" style="display:none">
@@ -3028,7 +3027,6 @@
     brandTag: { en: `Pan-India Legal Marketplace`, hi: `अखिल भारतीय कानूनी मार्केटप्लेस` },
     myCases: { en: `My Cases`, hi: `मेरे मामले` },
     lawyerView: { en: `Careers`, hi: `करियर` },
-    adminView: { en: `Admin view`, hi: `एडमिन दृश्य` },
     introH1: { en: `Legal support that puts you first`, hi: `कानूनी सहायता, जो आपको सबसे पहले रखती है` },
     introSub: { en: `Fair Counsel connects you with verified, independent lawyers for the moments that matter, a rent agreement, a family matter, a dispute, a business contract, with transparent pricing and no legal jargon standing in your way.`, hi: `फेयर काउंसल आपको ज़रूरी पलों के लिए सत्यापित, स्वतंत्र वकीलों से जोड़ता है, किराया एग्रीमेंट, पारिवारिक मामला, विवाद, या व्यावसायिक अनुबंध, पारदर्शी कीमत के साथ, बिना किसी कानूनी शब्दजाल के।` },
     pillar1h: { en: `Verified lawyers only`, hi: `केवल सत्यापित वकील` },
@@ -5284,24 +5282,6 @@
       </div>`;
   }
 
-  // The "Admin view" button is hidden from the public by default (a live
-  // site shouldn't advertise an admin panel to every visitor). Visiting once
-  // with ?admin=1 in the URL reveals it and remembers that on this browser
-  // via localStorage, so it stays visible on future visits from the same
-  // device without needing the URL parameter again. The real access control
-  // is still the admin password, this is just about not showing the button
-  // to random visitors.
-  (function(){
-    try{
-      const params = new URLSearchParams(window.location.search);
-      if(params.get('admin') === '1') localStorage.setItem('fc_show_admin_btn', '1');
-      if(localStorage.getItem('fc_show_admin_btn') === '1'){
-        const btn = document.getElementById('adminToggleBtn');
-        if(btn) btn.style.display = '';
-      }
-    }catch(e){ /* localStorage unavailable, button stays hidden, still reachable via ?admin=1 each visit */ }
-  })();
-
   loadState();
   renderStepper();
   checkBackend().then(renderLawyers);
@@ -5309,6 +5289,13 @@
   applyLoadedStateToUI();
   autoAssociateLabels();
   setInterval(refreshNotifDot, 45000); // real unread check, only does anything once someone's actually logged in
+
+  // There is no "Admin view" button anywhere in the public UI - a live site
+  // shouldn't advertise an admin panel to every visitor. The only way in is
+  // knowing the URL: visiting /admin opens the login gate directly. The real
+  // access control is still the admin password (plus optional 2FA), this is
+  // just about not showing an admin entry point to random visitors.
+  if(/^\/admin\/?$/i.test(window.location.pathname)) openAdminGate();
 </script>
 
 </body>
