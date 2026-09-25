@@ -792,13 +792,14 @@
           <div id="freeMode">
             <div class="field">
               <label data-i18n="tellUsLabel">Tell Fair Counsel what you need</label>
-              <input type="text" id="freeInput" placeholder="e.g. Delhi, rent control, need agreement drafted" value="Jaipur, matrimonial matter, need mutual consent divorce paperwork">
+              <input type="text" id="freeInput" placeholder="e.g. Delhi, rent control, need agreement drafted" oninput="document.getElementById('freeInputError').style.display='none'">
+              <p class="revision-note" id="freeInputError" style="color:var(--brick);display:none;margin-top:6px">Describe your situation first.</p>
             </div>
             <div class="field" style="margin-top:12px">
               <label data-i18n="attachLabel">Attach relevant documents (optional)</label>
               <div class="file-input-fake" id="caseDocUpload" onclick="fakeAttachDoc()" data-i18n="attachHint">Click to attach existing papers, notice, agreement, ID proof (PDF/JPG, up to 10MB)</div>
             </div>
-            <button class="btn btn-brass btn-block" style="margin-top:14px" onclick="go('chat')" data-i18n="askFairCounselBtn">Ask Fair Counsel</button>
+            <button class="btn btn-brass btn-block" style="margin-top:14px" onclick="submitFreeInput()" data-i18n="askFairCounselBtn">Ask Fair Counsel</button>
             <p class="disclaimer-line" style="margin-top:10px" data-i18n="assistDisclaimer">Fair Counsel Assist helps match you to the right lawyer. It does not provide legal advice.</p>
           </div>
         </div>
@@ -3500,12 +3501,28 @@
     document.getElementById('freeQResult').style.display = 'none';
   }
 
+  // Validates before leaving the search screen - the input used to default
+  // to a hardcoded demo case and silently submit it if left empty, so a
+  // real client could end up "describing" a situation they never typed.
+  function submitFreeInput(){
+    const input = document.getElementById('freeInput');
+    const errEl = document.getElementById('freeInputError');
+    if(!input.value.trim()){
+      errEl.style.display = 'block';
+      input.focus();
+      return;
+    }
+    errEl.style.display = 'none';
+    go('chat');
+  }
+
   // Real keyword matching against the actual lawyer roster (POST /lawyers/match),
   // not the fixed "Matrimonial Law in Jaipur" response every query used to
   // get regardless of what was typed. 8s timeout with a friendly fallback,
   // since this is a real network call now, not a canned setTimeout.
   async function runChat(){
-    const val = document.getElementById('freeInput').value.trim() || 'Jaipur, matrimonial matter, need mutual consent divorce paperwork';
+    const val = document.getElementById('freeInput').value.trim();
+    if(!val) return; // guarded by submitFreeInput() before this screen is ever reached
     document.getElementById('chatUserMsg').textContent = val;
     document.getElementById('chatTyping').style.display = 'block';
     document.getElementById('chatErrorMsg').style.display = 'none';
