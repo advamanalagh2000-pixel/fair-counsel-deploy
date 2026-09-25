@@ -113,8 +113,6 @@
   .hero h1{font-size:38px;line-height:1.18;margin:0 0 16px;color:var(--navy);font-weight:600;}
   .hero p{font-size:15.5px;line-height:1.6;color:#4a4a52;max-width:480px;margin:0 0 26px;}
 
-  .trust-strip{display:flex;justify-content:space-between;gap:14px;margin-top:22px;padding:22px 30px;background:var(--white);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-md);flex-wrap:wrap;}
-  .trust-stat{text-align:center;flex:1;min-width:110px;}
   .free-q-badge{display:inline-block;background:var(--sage-l);color:var(--sage);font-size:10.5px;font-weight:700;letter-spacing:.5px;padding:4px 10px;border-radius:20px;}
   .free-q-thinking{font-size:13px;color:#8a8674;font-style:italic;}
   .free-q-answer{background:var(--paper-2);border:1px solid var(--line);border-radius:6px;padding:16px 18px;}
@@ -125,8 +123,6 @@
   .free-q-teaser span{display:block;font-size:12.5px;color:#3a4d3d;}
   .free-q-teaser .btn-ghost{border-color:var(--sage);color:var(--sage);}
   @media(max-width:760px){ .free-q-teaser{flex-wrap:wrap;} }
-  .trust-num{font-family:'Source Serif 4',serif;font-size:26px;font-weight:700;color:var(--navy);}
-  .trust-label{font-size:11.5px;color:#6b6858;margin-top:2px;}
   .hero-seal-big{width:190px;height:190px;margin:0 auto;filter:drop-shadow(0 10px 22px rgba(14,77,74,.18));}
   .hero-seal-big svg{width:100%;height:100%;}
 
@@ -790,108 +786,10 @@
         <div class="trans-badge" data-i18n="transBadge">✓ See the price before you book, always</div>
         <div class="eyebrow" data-i18n="eyebrowCase">Case file opens here</div>
         <h1 data-i18n="searchH1">Find the right lawyer.<br>Skip the guesswork.</h1>
-        <p data-i18n="searchSub">Search verified lawyers by specialisation, city and language, or describe your situation in your own words and let Fair Counsel point you to the right person.</p>
+        <p data-i18n="searchSub">Describe your situation in your own words and let Fair Counsel point you to the right verified lawyer.</p>
 
         <div class="search-card">
-          <div class="mode-tabs">
-            <button class="mode-tab on" id="tabFilter" onclick="setMode('filter')" data-i18n="tabFilter">Search by filters</button>
-            <button class="mode-tab" id="tabFree" onclick="setMode('free')" data-i18n="tabFree">Describe it in your words</button>
-          </div>
-
-          <div id="filterMode">
-            <div class="field-row">
-              <div class="field"><label data-i18n="specLabel">Specialisation</label>
-                <select id="filterSpec"><option value="Any" data-i18n="specAny">Any</option>
-                  <option value="Corporate &amp; Commercial Law" data-i18n="spec_corporate___commercial_law">Corporate &amp; Commercial Law</option>
-                  <option value="Mergers &amp; Acquisitions (M&amp;A)" data-i18n="spec_mergers___acquisitions__m_a">Mergers &amp; Acquisitions (M&amp;A)</option>
-                  <option value="Banking &amp; Finance Law" data-i18n="spec_banking___finance_law">Banking &amp; Finance Law</option>
-                  <option value="Insolvency &amp; Bankruptcy Law" data-i18n="spec_insolvency___bankruptcy_law">Insolvency &amp; Bankruptcy Law</option>
-                  <option value="Civil Litigation" data-i18n="spec_civil_litigation">Civil Litigation</option>
-                  <option value="Criminal Law" data-i18n="spec_criminal_law">Criminal Law</option>
-                  <option value="Commercial Litigation" data-i18n="spec_commercial_litigation">Commercial Litigation</option>
-                  <option value="Arbitration &amp; Alternative Dispute Resolution (ADR)" data-i18n="spec_arbitration___alternative_dispute_resolu">Arbitration &amp; Alternative Dispute Resolution (ADR)</option>
-                  <option value="Constitutional Law" data-i18n="spec_constitutional_law">Constitutional Law</option>
-                  <option value="Administrative Law" data-i18n="spec_administrative_law">Administrative Law</option>
-                  <option value="Competition Law" data-i18n="spec_competition_law">Competition Law</option>
-                  <option value="Securities &amp; Capital Markets Law" data-i18n="spec_securities___capital_markets_law">Securities &amp; Capital Markets Law</option>
-                  <option value="Securities &amp; Exchange Board of India (SEBI) Laws" data-i18n="spec_securities___exchange_board_of_india__se">Securities &amp; Exchange Board of India (SEBI) Laws</option>
-                  <option value="Company Law" data-i18n="spec_company_law">Company Law</option>
-                  <option value="Contract Law" data-i18n="spec_contract_law">Contract Law</option>
-                  <option value="Real Estate &amp; Property Law" data-i18n="spec_real_estate___property_law">Real Estate &amp; Property Law</option>
-                  <option value="Infrastructure &amp; Construction Law" data-i18n="spec_infrastructure___construction_law">Infrastructure &amp; Construction Law</option>
-                  <optgroup label="Intellectual Property Rights (IPR)">
-                  <option value="Intellectual Property Rights (IPR)" data-i18n="spec_intellectual_property_rights__ipr">Intellectual Property Rights (IPR)</option>
-                  <option value="Trademarks" data-i18n="spec_trademarks">Trademarks</option>
-                  <option value="Copyright" data-i18n="spec_copyright">Copyright</option>
-                  <option value="Patents" data-i18n="spec_patents">Patents</option>
-                  <option value="Designs" data-i18n="spec_designs">Designs</option>
-                  </optgroup>
-                  <option value="Information Technology &amp; Cyber Law" data-i18n="spec_information_technology___cyber_law">Information Technology &amp; Cyber Law</option>
-                  <option value="Data Protection &amp; Privacy Law" data-i18n="spec_data_protection___privacy_law">Data Protection &amp; Privacy Law</option>
-                  <option value="Employment &amp; Labour Law" data-i18n="spec_employment___labour_law">Employment &amp; Labour Law</option>
-                  <optgroup label="Taxation Law">
-                  <option value="Taxation Law" data-i18n="spec_taxation_law">Taxation Law</option>
-                  <option value="Direct Tax" data-i18n="spec_direct_tax">Direct Tax</option>
-                  <option value="GST" data-i18n="spec_gst">GST</option>
-                  <option value="Customs &amp; Indirect Tax" data-i18n="spec_customs___indirect_tax">Customs &amp; Indirect Tax</option>
-                  </optgroup>
-                  <option value="Family Law" data-i18n="spec_family_law">Family Law</option>
-                  <option value="Personal Laws" data-i18n="spec_personal_laws">Personal Laws</option>
-                  <option value="Consumer Protection Law" data-i18n="spec_consumer_protection_law">Consumer Protection Law</option>
-                  <option value="Motor Accident Claims" data-i18n="spec_motor_accident_claims">Motor Accident Claims</option>
-                  <option value="Insurance Law" data-i18n="spec_insurance_law">Insurance Law</option>
-                  <option value="Environmental Law" data-i18n="spec_environmental_law">Environmental Law</option>
-                  <option value="Energy &amp; Power Law" data-i18n="spec_energy___power_law">Energy &amp; Power Law</option>
-                  <option value="Telecommunications Law" data-i18n="spec_telecommunications_law">Telecommunications Law</option>
-                  <option value="Media &amp; Entertainment Law" data-i18n="spec_media___entertainment_law">Media &amp; Entertainment Law</option>
-                  <option value="Sports Law" data-i18n="spec_sports_law">Sports Law</option>
-                  <option value="Healthcare &amp; Medical Law" data-i18n="spec_healthcare___medical_law">Healthcare &amp; Medical Law</option>
-                  <option value="Pharmaceutical &amp; Life Sciences Law" data-i18n="spec_pharmaceutical___life_sciences_law">Pharmaceutical &amp; Life Sciences Law</option>
-                  <option value="Education Law" data-i18n="spec_education_law">Education Law</option>
-                  <option value="Aviation Law" data-i18n="spec_aviation_law">Aviation Law</option>
-                  <option value="Maritime &amp; Admiralty Law" data-i18n="spec_maritime___admiralty_law">Maritime &amp; Admiralty Law</option>
-                  <option value="International Trade &amp; Customs Law" data-i18n="spec_international_trade___customs_law">International Trade &amp; Customs Law</option>
-                  <option value="Foreign Exchange &amp; FEMA" data-i18n="spec_foreign_exchange___fema">Foreign Exchange &amp; FEMA</option>
-                  <option value="White-Collar Crime &amp; Economic Offences" data-i18n="spec_white_collar_crime___economic_offences">White-Collar Crime &amp; Economic Offences</option>
-                  <option value="Anti-Money Laundering (PMLA)" data-i18n="spec_anti_money_laundering__pmla">Anti-Money Laundering (PMLA)</option>
-                  <option value="Anti-Corruption &amp; Prevention of Corruption Laws" data-i18n="spec_anti_corruption___prevention_of_corrupti">Anti-Corruption &amp; Prevention of Corruption Laws</option>
-                  <option value="Regulatory &amp; Compliance" data-i18n="spec_regulatory___compliance">Regulatory &amp; Compliance</option>
-                  <option value="Public Interest Litigation (PIL)" data-i18n="spec_public_interest_litigation__pil">Public Interest Litigation (PIL)</option>
-                  <option value="Human Rights Law" data-i18n="spec_human_rights_law">Human Rights Law</option>
-                  <option value="Immigration &amp; Citizenship Law" data-i18n="spec_immigration___citizenship_law">Immigration &amp; Citizenship Law</option>
-                  <option value="Wills, Trusts &amp; Estate Planning" data-i18n="spec_wills__trusts___estate_planning">Wills, Trusts &amp; Estate Planning</option>
-                  <option value="Succession &amp; Inheritance Law" data-i18n="spec_succession___inheritance_law">Succession &amp; Inheritance Law</option>
-                  <option value="Land &amp; Revenue Law" data-i18n="spec_land___revenue_law">Land &amp; Revenue Law</option>
-                  <option value="Local Government &amp; Municipal Law" data-i18n="spec_local_government___municipal_law">Local Government &amp; Municipal Law</option>
-                  <option value="Defence &amp; Military Law" data-i18n="spec_defence___military_law">Defence &amp; Military Law</option>
-                  <option value="International Law" data-i18n="spec_international_law">International Law</option>
-                  <option value="Private International Law" data-i18n="spec_private_international_law">Private International Law</option>
-                  <option value="Legal Due Diligence" data-i18n="spec_legal_due_diligence">Legal Due Diligence</option>
-                  <option value="Legal Advisory &amp; General Corporate Counsel" data-i18n="spec_legal_advisory___general_corporate_couns">Legal Advisory &amp; General Corporate Counsel</option>
-                  <option value="Debt Recovery &amp; Enforcement" data-i18n="spec_debt_recovery___enforcement">Debt Recovery &amp; Enforcement</option>
-                  <option value="SARFAESI &amp; DRT Proceedings" data-i18n="spec_sarfaesi___drt_proceedings">SARFAESI &amp; DRT Proceedings</option>
-                  <option value="NCLT &amp; NCLAT Practice" data-i18n="spec_nclt___nclat_practice">NCLT &amp; NCLAT Practice</option>
-                  <option value="High Court &amp; Supreme Court Litigation" data-i18n="spec_high_court___supreme_court_litigation">High Court &amp; Supreme Court Litigation</option>
-                  <option value="Tribunal &amp; Quasi-Judicial Proceedings" data-i18n="spec_tribunal___quasi_judicial_proceedings">Tribunal &amp; Quasi-Judicial Proceedings</option>
-                  </select>
-              </div>
-              <div class="field"><label data-i18n="cityLabel">City</label>
-                <select id="filterCity"><option value="Any">Any</option><option>Delhi</option><option>Jaipur</option><option>Mumbai</option><option>Bengaluru</option><option>Pune</option><option>Hyderabad</option></select>
-              </div>
-            </div>
-            <div class="field-row">
-              <div class="field"><label data-i18n="langLabel">Language</label>
-                <select id="filterLang"><option value="Any">Any</option><option>Hindi</option><option>English</option><option>Marathi</option><option>Kannada</option><option>Telugu</option></select>
-              </div>
-              <div class="field"><label data-i18n="expLabel">Experience</label>
-                <select id="filterExp"><option value="Any">Any</option><option>3+ years</option><option>7+ years</option><option>15+ years</option></select>
-              </div>
-            </div>
-            <button class="btn btn-primary btn-block" style="margin-top:6px" onclick="applyFiltersAndGo()" data-i18n="seeMatchingBtn">See matching lawyers</button>
-            <p class="disclaimer-line" style="margin-top:10px;text-align:left" data-i18n="preferDesc">Prefer to just tell us what happened instead of picking filters? <a href="#" onclick="setMode('free');return false;" style="color:var(--brass)">Describe it in your words</a>, and you can attach documents there too.</p>
-          </div>
-
-          <div id="freeMode" style="display:none">
+          <div id="freeMode">
             <div class="field">
               <label data-i18n="tellUsLabel">Tell Fair Counsel what you need</label>
               <input type="text" id="freeInput" placeholder="e.g. Delhi, rent control, need agreement drafted" value="Jaipur, matrimonial matter, need mutual consent divorce paperwork">
@@ -933,12 +831,6 @@
       <div class="hero-seal-big">
         <div class="seal-logo" role="img" aria-label="Fair Counsel, verified legal marketplace" style="filter:drop-shadow(0 8px 18px rgba(20,70,125,.18))"></div>
       </div>
-    </div>
-
-    <div class="trust-strip">
-      <div class="trust-stat"><div class="trust-num" id="statVerifiedLawyers">—</div><div class="trust-label" data-i18n="trust1">Verified lawyers</div></div>
-      <div class="trust-stat" id="statRatingWrap" style="display:none"><div class="trust-num" id="statRating"></div><div class="trust-label" data-i18n="trust3">Average client rating</div></div>
-      <div class="trust-stat"><div class="trust-num" id="statCasesClosed">—</div><div class="trust-label" data-i18n="trust4">Cases closed</div></div>
     </div>
 
     <div class="howit">
@@ -2120,26 +2012,6 @@
     if(banner) banner.style.display = backendReachable ? 'none' : 'block';
   }
 
-  // Real homepage trust-strip numbers from /api/stats - left as "—" (not a
-  // fake number) if the backend is unreachable or nothing has happened yet.
-  async function loadHomeStats(){
-    try{
-      const res = await fetch(API_BASE + '/stats');
-      if(!res.ok) return;
-      const s = await res.json();
-      const lawyersEl = document.getElementById('statVerifiedLawyers');
-      const casesEl = document.getElementById('statCasesClosed');
-      if(lawyersEl) lawyersEl.textContent = s.verifiedLawyers + '+';
-      if(casesEl) casesEl.textContent = s.closedCases > 0 ? s.closedCases + '+' : s.closedCases;
-      if(s.reviewCount > 0){
-        const wrap = document.getElementById('statRatingWrap');
-        const ratingEl = document.getElementById('statRating');
-        if(ratingEl) ratingEl.innerHTML = `${s.avgRating.toFixed(1)} <span class="mono" style="font-size:13px">★</span>`;
-        if(wrap) wrap.style.display = '';
-      }
-    }catch(e){ /* stats are a nice-to-have, never block the homepage on them */ }
-  }
-
   const STEP_LABELS = [
     {id:'search', label:'Search', key:'stepSearch'},
     {id:'shortlist', label:'Shortlist', key:'stepShortlist'},
@@ -2917,7 +2789,6 @@
   // LANGUAGE TOGGLE (token EN/HI on key hero + nav strings)
   let currentLang = 'EN';
   const I18N_DICT = {
-    specAny: { en: `Any`, hi: `कोई भी` },
     spec_corporate___commercial_law: { en: `Corporate & Commercial Law`, hi: `कॉर्पोरेट एवं वाणिज्यिक विधि` },
     spec_mergers___acquisitions__m_a: { en: `Mergers & Acquisitions (M&A)`, hi: `विलय एवं अधिग्रहण (M&A)` },
     spec_banking___finance_law: { en: `Banking & Finance Law`, hi: `बैंकिंग एवं वित्त विधि` },
@@ -3087,15 +2958,7 @@
     transBadge: { en: `✓ See the price before you book, always`, hi: `✓ बुक करने से पहले कीमत देखें, हमेशा` },
     eyebrowCase: { en: `Case file opens here`, hi: `यहाँ से केस फ़ाइल शुरू होती है` },
     searchH1: { en: `Find the right lawyer.<br>Skip the guesswork.`, hi: `सही वकील खोजें।<br>अंदाज़ा लगाना छोड़ें।`, html:true },
-    searchSub: { en: `Search verified lawyers by specialisation, city and language, or describe your situation in your own words and let Fair Counsel point you to the right person.`, hi: `विशेषज्ञता, शहर और भाषा के अनुसार सत्यापित वकील खोजें, या अपनी स्थिति अपने शब्दों में बताएं और फेयर काउंसल को सही व्यक्ति तक पहुँचाने दें।` },
-    tabFilter: { en: `Search by filters`, hi: `फ़िल्टर से खोजें` },
-    tabFree: { en: `Describe it in your words`, hi: `अपने शब्दों में बताएं` },
-    specLabel: { en: `Specialisation`, hi: `विशेषज्ञता` },
-    cityLabel: { en: `City`, hi: `शहर` },
-    langLabel: { en: `Language`, hi: `भाषा` },
-    expLabel: { en: `Experience`, hi: `अनुभव` },
-    seeMatchingBtn: { en: `See matching lawyers`, hi: `मिलते-जुलते वकील देखें` },
-    preferDesc: { en: `Prefer to just tell us what happened instead of picking filters? <a href="#" onclick="setMode('free');return false;" style="color:var(--brass)">Describe it in your words</a>, and you can attach documents there too.`, hi: `फ़िल्टर चुनने के बजाय बस हमें बताना चाहते हैं कि क्या हुआ? <a href="#" onclick="setMode('free');return false;" style="color:var(--brass)">अपने शब्दों में बताएं</a>, और वहाँ आप दस्तावेज़ भी जोड़ सकते हैं।`, html:true },
+    searchSub: { en: `Describe your situation in your own words and let Fair Counsel point you to the right verified lawyer.`, hi: `अपनी स्थिति अपने शब्दों में बताएं और फेयर काउंसल को सही सत्यापित वकील तक पहुँचाने दें।` },
     tellUsLabel: { en: `Tell Fair Counsel what you need`, hi: `फेयर काउंसल को बताएं आपको क्या चाहिए` },
     attachLabel: { en: `Attach relevant documents (optional)`, hi: `संबंधित दस्तावेज़ जोड़ें (वैकल्पिक)` },
     attachHint: { en: `Click to attach existing papers, notice, agreement, ID proof (PDF/JPG, up to 10MB)`, hi: `मौजूदा कागज़ात जोड़ने के लिए क्लिक करें, नोटिस, एग्रीमेंट, पहचान पत्र (PDF/JPG, 10MB तक)` },
@@ -3113,9 +2976,6 @@
     chip10: { en: `Civil Litigation`, hi: `सिविल वाद` },
     chip11: { en: `Contract Law`, hi: `अनुबंध विधि` },
     chip12: { en: `Information Technology & Cyber Law`, hi: `सूचना प्रौद्योगिकी एवं साइबर विधि` },
-    trust1: { en: `Verified lawyers`, hi: `सत्यापित वकील` },
-    trust3: { en: `Average client rating`, hi: `औसत ग्राहक रेटिंग` },
-    trust4: { en: `Cases closed`, hi: `पूर्ण हुए मामले` },
     freeQTeaserTitle: { en: `Not sure where to start?`, hi: `पता नहीं कहाँ से शुरू करें?` },
     freeQTeaserBody: { en: `Ask a free legal question, no payment, no case opened, just a quick pointer.`, hi: `एक मुफ़्त कानूनी सवाल पूछें, कोई भुगतान नहीं, कोई मामला नहीं खुलता, बस एक त्वरित मार्गदर्शन।` },
     freeQTeaserBtn: { en: `Ask for free →`, hi: `मुफ़्त में पूछें →` },
@@ -3587,13 +3447,6 @@
     document.getElementById('durFeeLabel').textContent = fee===0 ? 'Included in plan' : '₹'+fee.toLocaleString('en-IN');
   }
 
-  function setMode(mode){
-    document.getElementById('tabFilter').classList.toggle('on', mode==='filter');
-    document.getElementById('tabFree').classList.toggle('on', mode==='free');
-    document.getElementById('filterMode').style.display = mode==='filter' ? 'block':'none';
-    document.getElementById('freeMode').style.display = mode==='free' ? 'block':'none';
-  }
-
   // ============== FREE LEGAL QUESTION (no payment, no case) ==============
   const FREE_Q_ANSWERS = [
     { test: /divorce|mutual consent|तलाक/i,
@@ -3729,18 +3582,6 @@
   let adminAuditLog = [];
   let ticketSubjects = [];
   let lawyerApplied = false;
-
-  function applyFiltersAndGo(){
-    activeFilters = {
-      spec: document.getElementById('filterSpec').value,
-      city: document.getElementById('filterCity').value,
-      lang: document.getElementById('filterLang').value,
-      exp: document.getElementById('filterExp').value
-    };
-    currentPage = 1;
-    saveState();
-    go('shortlist', true);
-  }
 
   function showSkeleton(){
     const grid = document.getElementById('lawyerGrid');
@@ -5285,7 +5126,6 @@
   loadState();
   renderStepper();
   checkBackend().then(renderLawyers);
-  loadHomeStats();
   applyLoadedStateToUI();
   autoAssociateLabels();
   setInterval(refreshNotifDot, 45000); // real unread check, only does anything once someone's actually logged in
