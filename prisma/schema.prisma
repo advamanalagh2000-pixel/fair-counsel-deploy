@@ -31,9 +31,10 @@ model User {
   gstin       String?
   createdAt   DateTime @default(now())
 
-  cases          Case[]
-  supportTickets SupportTicket[]
-  reviews        Review[]
+  cases                Case[]
+  supportTickets       SupportTicket[]
+  reviews              Review[]
+  consultationRequests ConsultationRequest[]
 }
 
 model Otp {
@@ -129,6 +130,30 @@ model Message {
   createdAt  DateTime @default(now())
 
   @@index([caseId])
+}
+
+// A company client's consultation request before it has a lawyer - admin
+// reviews these and matches one to a real Lawyer, which creates a real Case.
+// Kept separate from Case (rather than making Case.lawyerId optional) so the
+// existing case/payment/messaging code never has to handle a lawyer-less
+// case.
+model ConsultationRequest {
+  id             String    @id @default(uuid())
+  clientId       String
+  client         User      @relation(fields: [clientId], references: [id])
+  practiceAreas  String // JSON-encoded string[]
+  preferredDate  DateTime
+  channel        String // video | phone | in_person
+  priorityClient Boolean   @default(false)
+  status         String    @default("pending") // pending | matched | declined
+  declineReason  String?
+  matchedCaseId  String?
+  matchedLawyerId String?
+  createdAt      DateTime  @default(now())
+  resolvedAt     DateTime?
+
+  @@index([clientId])
+  @@index([status])
 }
 
 model Review {

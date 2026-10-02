@@ -724,6 +724,50 @@
     </div>
   </section>
 
+  <!-- SCREEN: COMPANY CONSULTATION REQUEST -->
+  <section class="screen" id="screen-company-request">
+    <div class="card" style="max-width:680px;margin:0 auto">
+      <h2 class="section-title serif">What kind of legal support do you need?</h2>
+      <p class="section-sub">Select every area that applies. Fair Counsel's team will match you with a lawyer who covers these, rather than you picking one yourself.</p>
+
+      <label for="reqAreaSearch">Types of law</label>
+      <input type="text" id="reqAreaSearch" placeholder="Search specialisations, e.g. tax, employment, IP" style="margin-top:8px" oninput="filterReqAreaChips(this.value)">
+      <div class="chip-row" id="reqAreaChipRow" style="margin-top:10px"></div>
+      <p class="revision-note" id="reqAreasError" style="color:var(--brick);display:none;margin-top:8px">Pick at least one type of law.</p>
+
+      <h2 class="section-title serif" style="margin-top:28px">Consultation details</h2>
+      <div class="field-row">
+        <div class="field">
+          <label for="reqDate">Preferred date</label>
+          <input type="date" id="reqDate">
+        </div>
+        <div class="field">
+          <label for="reqTime">Preferred time</label>
+          <input type="time" id="reqTime">
+        </div>
+      </div>
+      <p class="revision-note" id="reqDateError" style="color:var(--brick);display:none">Pick a date and time in the future.</p>
+
+      <div class="field" style="margin-top:14px">
+        <label>Meeting channel</label>
+        <div class="mode-tabs" style="margin-top:8px">
+          <button type="button" class="mode-tab on" id="reqChanBtn-video" onclick="setReqChannel('video')">Video call</button>
+          <button type="button" class="mode-tab" id="reqChanBtn-phone" onclick="setReqChannel('phone')">Voice call</button>
+          <button type="button" class="mode-tab" id="reqChanBtn-in_person" onclick="setReqChannel('in_person')">Physical (in-person)</button>
+        </div>
+      </div>
+
+      <div class="estamp-row" style="margin-top:16px">
+        <input type="checkbox" id="reqPriorityCheck">
+        <span>We'd like to be treated as a priority client for this request</span>
+      </div>
+
+      <p class="revision-note" id="reqSubmitError" style="color:var(--brick);display:none;margin-top:14px"></p>
+      <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="submitConsultationRequest()">Submit request</button>
+      <p class="disclaimer-line" style="margin-top:10px">Fair Counsel's admin team reviews every request and matches you with a verified lawyer, you'll be notified once that happens.</p>
+    </div>
+  </section>
+
   <!-- SCREEN 0.5: LOGIN / OTP -->
   <section class="screen" id="screen-login">
     <div class="card login-card">
@@ -1458,6 +1502,7 @@
     <div class="dash-tabs">
       <button class="dash-tab on" id="dashTabBtn-verify" onclick="switchDashTab('verify',this)">Lawyer verification <span class="dash-tab-count" id="dashTabCount-verify">2</span></button>
       <button class="dash-tab" id="dashTabBtn-drafts" onclick="switchDashTab('drafts',this)">Draft review <span class="dash-tab-count" id="dashTabCount-drafts">1</span></button>
+      <button class="dash-tab" id="dashTabBtn-requests" onclick="switchDashTab('requests',this)">Consultation requests <span class="dash-tab-count" id="dashTabCount-requests">0</span></button>
       <button class="dash-tab" id="dashTabBtn-tickets" onclick="switchDashTab('tickets',this)">Support tickets <span class="dash-tab-count" id="dashTabCount-tickets">1</span></button>
       <button class="dash-tab" id="dashTabBtn-cases" onclick="switchDashTab('cases',this)">All cases</button>
       <button class="dash-tab" id="dashTabBtn-lawyers" onclick="switchDashTab('lawyers',this)">Lawyers</button>
@@ -1526,6 +1571,18 @@
       </table>
 </div>
       <div class="dash-empty" id="dashDraftEmpty" style="display:none">No drafts currently awaiting review.</div>
+    </div>
+
+    <!-- CONSULTATION REQUESTS (company clients, no lawyer picked yet) -->
+    <div class="dash-panel" id="dashPanel-requests">
+      <p class="revision-note" style="margin-top:0">Company clients describe what they need instead of picking a lawyer themselves. Match each request to a verified lawyer to open a real case, same as any other booking.</p>
+      <p class="scroll-hint">↔ swipe to see all columns</p><div class="table-scroll">
+<table class="dash-table">
+        <thead><tr><th>Client</th><th>Types of law</th><th>Preferred</th><th>Channel</th><th>Priority</th><th>Action</th></tr></thead>
+        <tbody id="dashRequestRows"></tbody>
+      </table>
+</div>
+      <div class="dash-empty" id="dashRequestEmpty" style="display:none">No consultation requests awaiting a match.</div>
     </div>
 
     <!-- SUPPORT TICKETS -->
@@ -1892,7 +1949,7 @@
     </div>
     <ul id="planConfirmFeatures" style="margin:14px 0;padding-left:18px;font-size:13.5px;line-height:1.8"></ul>
     <p class="revision-note" id="planConfirmNote"></p>
-    <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="closePlanConfirm();enterSearch()">Continue to find a lawyer →</button>
+    <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="closePlanConfirm();goCompanyRequest()">Continue →</button>
   </div>
 </div>
 
@@ -2123,7 +2180,7 @@
     if(subscribe){
       showPlanConfirm(companyPlan);
     } else {
-      enterSearch();
+      goCompanyRequest();
     }
   }
 
@@ -2137,12 +2194,120 @@
     document.getElementById('planConfirmPrice').textContent = card.querySelector('.plan-price').textContent;
     document.getElementById('planConfirmFeatures').innerHTML = card.querySelector('.plan-list').innerHTML;
     document.getElementById('planConfirmNote').textContent = plan === 'enterprise'
-      ? "This is a custom plan, Fair Counsel will reach out to set up your Enterprise pricing and billing. You can start finding a lawyer in the meantime."
-      : "Billing for this plan isn't live yet, Fair Counsel will follow up to set up your subscription invoice. You can start finding a lawyer in the meantime.";
+      ? "This is a custom plan, Fair Counsel will reach out to set up your Enterprise pricing and billing. You can submit your consultation request in the meantime."
+      : "Billing for this plan isn't live yet, Fair Counsel will follow up to set up your subscription invoice. You can submit your consultation request in the meantime.";
     openModal('planConfirmModal','planConfirmOverlay');
   }
   function closePlanConfirm(){
     closeModalGeneric('planConfirmModal','planConfirmOverlay');
+  }
+
+  // ============== COMPANY CONSULTATION REQUEST ==============
+  // Company clients don't pick a lawyer themselves - they describe what they
+  // need and Fair Counsel's admin team matches them to one (see
+  // admin.js POST /consultation-requests/:id/match).
+  let reqSelectedAreas = new Set(); // holds data-i18n keys, not display text
+  let reqSelectedChannel = 'video';
+
+  function goCompanyRequest(){
+    showClientStepper();
+    updateTypeBadge();
+    renderReqAreaChips();
+    document.getElementById('reqAreaSearch').value = '';
+    document.getElementById('reqDate').value = '';
+    document.getElementById('reqTime').value = '';
+    document.getElementById('reqPriorityCheck').checked = false;
+    setReqChannel('video');
+    document.getElementById('reqAreasError').style.display = 'none';
+    document.getElementById('reqDateError').style.display = 'none';
+    document.getElementById('reqSubmitError').style.display = 'none';
+    go('company-request');
+  }
+
+  // Clones the same canonical specialisation list the lawyer-application
+  // form uses (#specChipRow), rather than hardcoding a third copy of ~65
+  // practice areas in this file.
+  function renderReqAreaChips(){
+    const target = document.getElementById('reqAreaChipRow');
+    target.innerHTML = '';
+    document.querySelectorAll('#specChipRow .chip-select').forEach(src=>{
+      const key = src.getAttribute('data-i18n');
+      const clone = document.createElement('button');
+      clone.type = 'button';
+      clone.className = 'chip-select' + (reqSelectedAreas.has(key) ? ' on' : '');
+      clone.setAttribute('data-i18n', key);
+      clone.textContent = src.textContent;
+      clone.onclick = () => toggleReqArea(clone, key);
+      target.appendChild(clone);
+    });
+  }
+  function toggleReqArea(btn, key){
+    if(reqSelectedAreas.has(key)){ reqSelectedAreas.delete(key); btn.classList.remove('on'); }
+    else { reqSelectedAreas.add(key); btn.classList.add('on'); }
+    document.getElementById('reqAreasError').style.display = 'none';
+  }
+  function filterReqAreaChips(query){
+    const q = query.trim().toLowerCase();
+    document.querySelectorAll('#reqAreaChipRow .chip-select').forEach(c=>{
+      const matches = !q || c.textContent.toLowerCase().includes(q) || c.classList.contains('on');
+      c.style.display = matches ? '' : 'none';
+    });
+  }
+  function setReqChannel(channel){
+    reqSelectedChannel = channel;
+    ['video','phone','in_person'].forEach(c=>{
+      document.getElementById('reqChanBtn-'+c).classList.toggle('on', c===channel);
+    });
+  }
+
+  async function submitConsultationRequest(){
+    const areasErr = document.getElementById('reqAreasError');
+    const dateErr = document.getElementById('reqDateError');
+    const submitErr = document.getElementById('reqSubmitError');
+    areasErr.style.display = 'none';
+    dateErr.style.display = 'none';
+    submitErr.style.display = 'none';
+
+    if(reqSelectedAreas.size === 0){
+      areasErr.style.display = 'block';
+      return;
+    }
+    const dateVal = document.getElementById('reqDate').value;
+    const timeVal = document.getElementById('reqTime').value;
+    const preferredDate = (dateVal && timeVal) ? new Date(`${dateVal}T${timeVal}`) : null;
+    if(!preferredDate || isNaN(preferredDate.getTime()) || preferredDate.getTime() < Date.now()){
+      dateErr.style.display = 'block';
+      return;
+    }
+
+    // Read by canonical English label (via I18N_DICT), not textContent, so
+    // this still works correctly if the page is currently showing Hindi.
+    const practiceAreas = Array.from(reqSelectedAreas).map(key=>{
+      const entry = I18N_DICT[key];
+      return entry ? entry.en : key;
+    });
+    const priorityClient = document.getElementById('reqPriorityCheck').checked;
+    const channel = reqSelectedChannel;
+
+    requireVerification(async ()=>{
+      try{
+        await api('/consultation-requests', { method:'POST', body:{
+          practiceAreas, preferredDate: preferredDate.toISOString(), channel, priorityClient
+        }});
+        // requireVerification() may have routed through the OTP screen first
+        // (a fresh signup mid-submission) - make sure this screen is the one
+        // actually showing before writing the success state into it.
+        go('company-request');
+        document.querySelector('#screen-company-request .card').innerHTML = `
+          <div class="pending-box" style="background:var(--sage-l);border-color:#cfe0cb">
+            <div><strong>Request submitted.</strong> Fair Counsel's admin team will review it and match you with a verified lawyer. You'll get a notification the moment that happens.</div>
+          </div>
+          <button class="btn btn-ghost" style="margin-top:16px" onclick="goMyCases()">Go to My Cases</button>`;
+      }catch(e){
+        submitErr.textContent = e.message || 'Could not submit your request right now.';
+        submitErr.style.display = 'block';
+      }
+    });
   }
 
   let loggedIn = false;
@@ -2662,7 +2827,7 @@
   function hasNotifIdentity(){ return !!(lawyerToken || (loggedIn && authToken)); }
   function notifApiToken(){ return lawyerToken || undefined; }
 
-  const NOTIF_ICON = { message: '💬', review: '★', verification: '✅', draft: '📄', payment: '💳' };
+  const NOTIF_ICON = { message: '💬', review: '★', verification: '✅', draft: '📄', payment: '💳', request: '📅' };
   function timeAgo(iso){
     const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
     if(s < 60) return 'just now';
@@ -4133,6 +4298,7 @@
     document.getElementById('dashPanel-'+name).classList.add('on');
     if(name === 'audit') loadAdminAuditLog();
     if(name === 'drafts') loadAdminDraftQueue();
+    if(name === 'requests') loadAdminConsultationRequests();
     if(name === 'admins') loadAdminAdmins();
     if(name === 'tickets') loadAdminSupportTickets();
     if(name === 'lawyers') loadAdminAllLawyers();
@@ -4177,6 +4343,7 @@
     go('admin');
     loadAdminVerifyQueue();
     loadAdminDraftQueue();
+    loadAdminConsultationRequests();
     loadAdminSupportTickets();
     loadAdminAuditLog();
     showToast('Signed in, this is a real backend session, not a client-side check.');
@@ -4486,6 +4653,86 @@
       updateDashCounts();
     }catch(e){
       console.warn('Could not load live draft review queue:', e.message);
+    }
+  }
+
+  // ============== ADMIN: company consultation requests ==============
+  async function loadAdminConsultationRequests(){
+    const tbody = document.getElementById('dashRequestRows');
+    const emptyEl = document.getElementById('dashRequestEmpty');
+    const countEl = document.getElementById('dashTabCount-requests');
+    try{
+      const [requests, allLawyers] = await Promise.all([
+        api('/admin/consultation-requests', { admin:true }),
+        api('/admin/lawyers', { admin:true })
+      ]);
+      const lawyerOptions = allLawyers.filter(l=>l.status==='verified')
+        .map(l => `<option value="${l.id}">${l.name} · ${l.city}</option>`).join('');
+      countEl.textContent = requests.length;
+      emptyEl.style.display = requests.length === 0 ? 'block' : 'none';
+      tbody.innerHTML = requests.map(r=>{
+        const when = new Date(r.preferredDate).toLocaleString('en-IN', {dateStyle:'medium', timeStyle:'short'});
+        const channelLabel = r.channel === 'in_person' ? 'Physical (in-person)' : r.channel === 'phone' ? 'Voice call' : 'Video call';
+        const priorityBadge = r.priorityClient ? '<span class="badge badge-fave">Priority</span>' : '';
+        return `
+        <tr data-request-id="${r.id}">
+          <td>${r.clientName}</td>
+          <td>${r.practiceAreas.join(', ')}</td>
+          <td class="mono" style="font-size:12px">${when}</td>
+          <td>${channelLabel}</td>
+          <td>${priorityBadge}</td>
+          <td>
+            <div style="display:flex;flex-direction:column;gap:6px;min-width:170px">
+              <select class="reqLawyerSelect" style="font-size:12.5px;padding:6px">
+                <option value="">Choose a lawyer…</option>
+                ${lawyerOptions}
+              </select>
+              <div class="admin-actions" style="margin-top:0">
+                <button class="mini-btn approve" onclick="matchConsultationRequest(this)">Match</button>
+                <button class="mini-btn reject" onclick="toggleReasonRow(this)">Decline</button>
+              </div>
+            </div>
+            <div class="reason-row">
+              <textarea rows="2" placeholder="Reason for declining (required)"></textarea>
+              <div class="reason-actions">
+                <button class="mini-btn reject" onclick="declineConsultationRequest(this)">Confirm decline</button>
+                <button class="mini-btn" onclick="toggleReasonRow(this)">Cancel</button>
+              </div>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+    }catch(e){
+      console.warn('Could not load consultation requests:', e.message);
+    }
+  }
+  async function matchConsultationRequest(btn){
+    const row = btn.closest('tr');
+    const id = row.getAttribute('data-request-id');
+    const lawyerId = row.querySelector('.reqLawyerSelect').value;
+    if(!lawyerId){ showToast('Pick a lawyer first.'); return; }
+    try{
+      await api(`/admin/consultation-requests/${id}/match`, { method:'POST', admin:true, body:{ lawyerId } });
+      showToast('Matched, a new case was opened for the client.');
+      loadAdminConsultationRequests();
+      loadAdminAuditLog();
+    }catch(e){
+      showToast(e.message || 'Could not match this request right now.');
+    }
+  }
+  async function declineConsultationRequest(btn){
+    const row = btn.closest('tr');
+    const id = row.getAttribute('data-request-id');
+    const textarea = row.querySelector('.reason-row textarea');
+    const reason = textarea.value.trim();
+    if(!reason){ textarea.classList.add('err'); textarea.focus(); return; }
+    try{
+      await api(`/admin/consultation-requests/${id}/decline`, { method:'POST', admin:true, body:{ reason } });
+      showToast('Request declined.');
+      loadAdminConsultationRequests();
+      loadAdminAuditLog();
+    }catch(e){
+      showToast(e.message || 'Could not decline this request right now.');
     }
   }
 

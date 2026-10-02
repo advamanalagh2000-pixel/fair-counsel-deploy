@@ -2,7 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const path = require('path');
 const QRCode = require('qrcode');
-const { prisma, serializeLawyer } = require('../prisma');
+const { prisma, serializeLawyer, toArr } = require('../prisma');
 const { requireAdmin, requireSuperAdmin } = require('../middleware/auth');
 const { logAudit } = require('../services/auditLog');
 const { generateTotpSecret, generateTotpUri, verifyTotpCode } = require('../services/totp');
@@ -44,6 +44,85 @@ router.post('/lawyers/:id/reject', requireAdmin, async (req, res) => {
     body: reason
   });
   res.json(serializeLawyer(lawyer));
+});
+
+/** GET /api/admin/consultation-requests?status=pending — company consultation requests awaiting a lawyer match */
+router.get('/consultation-requests', requireAdmin, async (req, res) => {
+  const { status = 'pending' } = req.query;
+  const requests = await prisma.consultationRequest.findMany({
+    where: { status },
+    orderBy: [{ priorityClient: 'desc' }, { createdAt: 'asc' }]
+  });
+  const clientIds = [...new Set(requests.map(r => r.clientId))];
+  const clients = await prisma.user.findMany({ where: { id: { in: clientIds } } });
+  const clientById = Object.fromEntries(clients.map(c => [c.id, c]));
+  res.json(requests.map(r => ({
+    ...r,
+    practiceAreas: toArr(r.practiceAreas),
+    clientName: clientById[r.clientId]?.companyName || clientById[r.clientId]?.name || clientById[r.clientId]?.phone || 'Unknown'
+  })));
+});
+
+/** POST /api/admin/consultation-requests/:id/match  { lawyerId } — creates a real case with the chosen lawyer */
+router.post('/consultation-requests/:id/match', requireAdmin, async (req, res) => {
+  try {
+    const { lawyerId } = req.body || {};
+    if (!lawyerId) return res.status(400).json({ error: 'Pick a lawyer to match this request to' });
+    const request = await prisma.consultationRequest.findUnique({ where: { id: req.params.id } });
+    if (!request) return res.status(404).json({ error: 'Not found' });
+    if (request.status !== 'pending') return res.status(400).json({ error: 'This request has already been resolved' });
+    const lawyer = await prisma.lawyer.findUnique({ where: { id: lawyerId } });
+    if (!lawyer || lawyer.status !== 'verified') return res.status(400).json({ error: 'Unknown lawyer' });
+
+    const practiceAreas = toArr(request.practiceAreas);
+    const fileCode = `FC/${new Date().getFullYear()}/${Math.floor(10000 + Math.random() * 90000)}`;
+    const newCase = await prisma.case.create({
+      data: {
+        fileCode,
+        clientId: request.clientId,
+        lawyerId,
+        category: practiceAreas[0] || 'General',
+        notes: `Consultation request: ${practiceAreas.join(', ')}. Preferred: ${request.preferredDate.toISOString()}.`,
+        channel: request.channel,
+        status: 'awaiting_client',
+        stage: 'consultation'
+      }
+    });
+    await prisma.consultationRequest.update({
+      where: { id: request.id },
+      data: { status: 'matched', matchedCaseId: newCase.id, matchedLawyerId: lawyerId, resolvedAt: new Date() }
+    });
+    logAudit('ok', `Consultation request matched to ${lawyer.name}, case ${newCase.fileCode} opened, by admin "${req.admin.username}"`);
+    await notify({
+      recipientRole: 'user', recipientId: request.clientId, type: 'request', caseId: newCase.id,
+      title: 'Matched with a lawyer',
+      body: `You've been matched with ${lawyer.name} for FILE ${newCase.fileCode}. Head to My Cases to get started.`
+    });
+    res.json({ ok: true, case: newCase });
+  } catch (err) {
+    console.error('POST /api/admin/consultation-requests/:id/match failed:', err);
+    res.status(500).json({ error: 'Could not match this request right now' });
+  }
+});
+
+/** POST /api/admin/consultation-requests/:id/decline  { reason } */
+router.post('/consultation-requests/:id/decline', requireAdmin, async (req, res) => {
+  const { reason } = req.body || {};
+  if (!reason || !reason.trim()) return res.status(400).json({ error: 'A reason is required' });
+  const request = await prisma.consultationRequest.findUnique({ where: { id: req.params.id } });
+  if (!request) return res.status(404).json({ error: 'Not found' });
+  if (request.status !== 'pending') return res.status(400).json({ error: 'This request has already been resolved' });
+  await prisma.consultationRequest.update({
+    where: { id: request.id },
+    data: { status: 'declined', declineReason: reason, resolvedAt: new Date() }
+  });
+  logAudit('no', `Consultation request declined by admin "${req.admin.username}" ("${reason}")`);
+  await notify({
+    recipientRole: 'user', recipientId: request.clientId, type: 'request',
+    title: 'Consultation request update',
+    body: reason
+  });
+  res.json({ ok: true });
 });
 
 /** GET /api/admin/lawyers/:id/bar-id — download the Bar ID document submitted with an application */

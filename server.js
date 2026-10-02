@@ -121,6 +121,7 @@ app.use('/api/cases', require('./src/routes/cases'));
 app.use('/api/payments', require('./src/routes/payments'));
 app.use('/api/documents', require('./src/routes/documents'));
 app.use('/api/notifications', require('./src/routes/notifications'));
+app.use('/api/consultation-requests', require('./src/routes/consultationRequests'));
 app.use('/api/esign', require('./src/routes/esign'));
 app.use('/api/support', require('./src/routes/support'));
 app.use('/api/admin', require('./src/routes/admin'));
