@@ -681,52 +681,19 @@
           <div class="tcta" data-i18n="typeCoCta">Continue as a company →</div>
         </div>
       </div>
-
-      <div class="sub-panel" id="companyPanel" style="display:none">
-        <h2 class="serif" data-i18n="planH2">Choose how your company works with Fair Counsel</h2>
-        <p class="section-sub" data-i18n="planSub">Company rates apply either way. A subscription reduces your per-case cost if you expect regular work.</p>
-        <div class="plan-row">
-          <div class="plan-card" id="planCard-basic" onclick="pickPlan('basic')">
-            <div class="plan-name" data-i18n="planBasicName">Basic</div>
-            <div class="plan-price">₹2,999<span data-i18n="perMonth"> /month</span></div>
-            <ul class="plan-list">
-              <li data-i18n="planBasic1">2 consultations included</li>
-              <li data-i18n="planBasic2">10% off drafting quotes</li>
-              <li data-i18n="planBasic3">Priority admin review</li>
-            </ul>
-          </div>
-          <div class="plan-card featured" id="planCard-growth" onclick="pickPlan('growth')">
-            <div class="plan-name" data-i18n="planGrowthName">Growth</div>
-            <div class="plan-price">₹7,999<span data-i18n="perMonth"> /month</span></div>
-            <ul class="plan-list">
-              <li data-i18n="planGrowth1">6 consultations included</li>
-              <li data-i18n="planGrowth2">20% off drafting quotes</li>
-              <li data-i18n="planGrowth3">Dedicated relationship lawyer</li>
-              <li data-i18n="planBasic3">Priority admin review</li>
-            </ul>
-          </div>
-          <div class="plan-card" id="planCard-enterprise" onclick="pickPlan('enterprise')">
-            <div class="plan-name" data-i18n="planEntName">Enterprise</div>
-            <div class="plan-price" style="font-size:17px" data-i18n="planEntPrice">Custom pricing</div>
-            <ul class="plan-list">
-              <li data-i18n="planEnt1">Unlimited consultations</li>
-              <li data-i18n="planEnt2">Negotiated drafting rates</li>
-              <li data-i18n="planEnt3">Dedicated legal team</li>
-              <li data-i18n="planEnt4">Monthly compliance calendar</li>
-            </ul>
-          </div>
-        </div>
-        <div class="sub-actions">
-          <button class="btn btn-brass" id="subscribeBtn" onclick="confirmCompany(true)" disabled data-i18n="subscribeBtn">Subscribe & continue</button>
-          <button class="btn btn-ghost" onclick="confirmCompany(false)" data-i18n="noSubBtn">Continue without subscribing, pay per case</button>
-        </div>
-      </div>
     </div>
   </section>
 
   <!-- SCREEN: COMPANY CONSULTATION REQUEST -->
   <section class="screen" id="screen-company-request">
     <div class="card" style="max-width:680px;margin:0 auto">
+      <div id="reqSuccessState" style="display:none">
+        <div class="pending-box" style="background:var(--sage-l);border-color:#cfe0cb">
+          <div><strong>Request submitted.</strong> Fair Counsel's admin team will review it and match you with a verified lawyer. You'll get a notification the moment that happens.</div>
+        </div>
+        <button class="btn btn-ghost" style="margin-top:16px" onclick="goMyCases()">Go to My Cases</button>
+      </div>
+      <div id="reqFormContent">
       <h2 class="section-title serif">What kind of legal support do you need?</h2>
       <p class="section-sub">Select every area that applies. Fair Counsel's team will match you with a lawyer who covers these, rather than you picking one yourself.</p>
 
@@ -758,13 +725,51 @@
       </div>
 
       <div class="estamp-row" style="margin-top:16px">
-        <input type="checkbox" id="reqPriorityCheck">
+        <input type="checkbox" id="reqPriorityCheck" onchange="togglePriorityPlanPicker()">
         <span>We'd like to be treated as a priority client for this request</span>
+      </div>
+
+      <div id="reqPlanPicker" style="display:none;margin-top:16px">
+        <p class="revision-note" style="margin-top:0">Priority handling comes with a subscription plan. Pick one to continue:</p>
+        <div class="plan-row">
+          <div class="plan-card" id="reqPlanCard-basic" onclick="pickRequestPlan('basic')">
+            <div class="plan-name" data-i18n="planBasicName">Basic</div>
+            <div class="plan-price">₹2,999<span data-i18n="perMonth"> /month</span></div>
+            <ul class="plan-list">
+              <li data-i18n="planBasic1">2 consultations included</li>
+              <li data-i18n="planBasic2">10% off drafting quotes</li>
+              <li data-i18n="planBasic3">Priority admin review</li>
+            </ul>
+          </div>
+          <div class="plan-card featured" id="reqPlanCard-growth" onclick="pickRequestPlan('growth')">
+            <div class="plan-name" data-i18n="planGrowthName">Growth</div>
+            <div class="plan-price">₹7,999<span data-i18n="perMonth"> /month</span></div>
+            <ul class="plan-list">
+              <li data-i18n="planGrowth1">6 consultations included</li>
+              <li data-i18n="planGrowth2">20% off drafting quotes</li>
+              <li data-i18n="planGrowth3">Dedicated relationship lawyer</li>
+              <li data-i18n="planBasic3">Priority admin review</li>
+            </ul>
+          </div>
+          <div class="plan-card" id="reqPlanCard-enterprise" onclick="pickRequestPlan('enterprise')">
+            <div class="plan-name" data-i18n="planEntName">Enterprise</div>
+            <div class="plan-price" style="font-size:17px" data-i18n="planEntPrice">Custom pricing</div>
+            <ul class="plan-list">
+              <li data-i18n="planEnt1">Unlimited consultations</li>
+              <li data-i18n="planEnt2">Negotiated drafting rates</li>
+              <li data-i18n="planEnt3">Dedicated legal team</li>
+              <li data-i18n="planEnt4">Monthly compliance calendar</li>
+            </ul>
+          </div>
+        </div>
+        <p class="revision-note" id="reqPlanError" style="color:var(--brick);display:none">Pick a plan to continue as a priority client.</p>
+        <p class="revision-note">Billing for this plan isn't live yet, Fair Counsel will follow up to set up your subscription invoice.</p>
       </div>
 
       <p class="revision-note" id="reqSubmitError" style="color:var(--brick);display:none;margin-top:14px"></p>
       <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="submitConsultationRequest()">Submit request</button>
       <p class="disclaimer-line" style="margin-top:10px">Fair Counsel's admin team reviews every request and matches you with a verified lawyer, you'll be notified once that happens.</p>
+      </div>
     </div>
   </section>
 
@@ -1936,23 +1941,6 @@
   </div>
 </div>
 
-<!-- PLAN CONFIRMATION MODAL -->
-<div class="overlay-bg" id="planConfirmOverlay" onclick="closePlanConfirm()"></div>
-<div class="admin-panel" id="planConfirmModal">
-  <div class="admin-head">
-    <h3 class="serif">Plan selected: <span id="planConfirmName"></span></h3>
-    <button class="close-x" onclick="closePlanConfirm()">×</button>
-  </div>
-  <div class="admin-body">
-    <div class="pending-box" style="background:var(--sage-l);border-color:#cfe0cb">
-      <div id="planConfirmPrice" style="font-weight:600"></div>
-    </div>
-    <ul id="planConfirmFeatures" style="margin:14px 0;padding-left:18px;font-size:13.5px;line-height:1.8"></ul>
-    <p class="revision-note" id="planConfirmNote"></p>
-    <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="closePlanConfirm();goCompanyRequest()">Continue →</button>
-  </div>
-</div>
-
 <!-- MESSAGES MODAL (case-scoped thread between client and lawyer) -->
 <div class="overlay-bg" id="messagesOverlay" onclick="closeMessagesModal()"></div>
 <div class="admin-panel" id="messagesModal">
@@ -2157,49 +2145,20 @@
   const PLAN_NAMES = {basic:'Basic', growth:'Growth', enterprise:'Enterprise', payg:'Pay-per-case'};
   let selectedPlan = null;
 
+  // A subscription plan is no longer a separate upfront choice - a company
+  // goes straight to the consultation request. Plan selection only comes up
+  // if they ask for priority handling on that screen (see
+  // togglePriorityPlanPicker()/pickRequestPlan() below), since priority is
+  // the one thing actually tied to being a paying subscriber.
   function chooseType(type){
     clientType = type;
     if(type === 'individual'){
       enterSearch();
     } else {
-      document.getElementById('companyPanel').style.display = 'block';
-      document.getElementById('companyPanel').scrollIntoView({behavior:'smooth', block:'start'});
-    }
-  }
-
-  function pickPlan(plan){
-    selectedPlan = plan;
-    document.querySelectorAll('.plan-card').forEach(c=>c.classList.remove('on'));
-    document.getElementById('planCard-'+plan).classList.add('on');
-    document.getElementById('subscribeBtn').disabled = false;
-  }
-
-  function confirmCompany(subscribe){
-    companyPlan = subscribe ? (selectedPlan || 'growth') : 'payg';
-    saveState();
-    if(subscribe){
-      showPlanConfirm(companyPlan);
-    } else {
+      companyPlan = 'payg';
+      saveState();
       goCompanyRequest();
     }
-  }
-
-  // Confirms the plan choice itself before moving on - previously this just
-  // silently jumped straight to browsing lawyers with no acknowledgement of
-  // what was picked. Note: no real billing happens here yet, and the copy
-  // says so rather than implying a charge went through.
-  function showPlanConfirm(plan){
-    const card = document.getElementById('planCard-'+plan);
-    document.getElementById('planConfirmName').textContent = card.querySelector('.plan-name').textContent;
-    document.getElementById('planConfirmPrice').textContent = card.querySelector('.plan-price').textContent;
-    document.getElementById('planConfirmFeatures').innerHTML = card.querySelector('.plan-list').innerHTML;
-    document.getElementById('planConfirmNote').textContent = plan === 'enterprise'
-      ? "This is a custom plan, Fair Counsel will reach out to set up your Enterprise pricing and billing. You can submit your consultation request in the meantime."
-      : "Billing for this plan isn't live yet, Fair Counsel will follow up to set up your subscription invoice. You can submit your consultation request in the meantime.";
-    openModal('planConfirmModal','planConfirmOverlay');
-  }
-  function closePlanConfirm(){
-    closeModalGeneric('planConfirmModal','planConfirmOverlay');
   }
 
   // ============== COMPANY CONSULTATION REQUEST ==============
@@ -2208,20 +2167,50 @@
   // admin.js POST /consultation-requests/:id/match).
   let reqSelectedAreas = new Set(); // holds data-i18n keys, not display text
   let reqSelectedChannel = 'video';
+  let reqSelectedPlan = null; // only relevant when priority handling is requested
 
   function goCompanyRequest(){
     showClientStepper();
     updateTypeBadge();
+    // A second visit this session (e.g. submitting another request later)
+    // must land back on the actual form, not whatever the last submission
+    // left showing.
+    document.getElementById('reqSuccessState').style.display = 'none';
+    document.getElementById('reqFormContent').style.display = 'block';
+    reqSelectedAreas = new Set();
     renderReqAreaChips();
     document.getElementById('reqAreaSearch').value = '';
     document.getElementById('reqDate').value = '';
     document.getElementById('reqTime').value = '';
     document.getElementById('reqPriorityCheck').checked = false;
+    document.getElementById('reqPlanPicker').style.display = 'none';
+    document.querySelectorAll('#reqPlanPicker .plan-card').forEach(c=>c.classList.remove('on'));
+    reqSelectedPlan = null;
     setReqChannel('video');
     document.getElementById('reqAreasError').style.display = 'none';
     document.getElementById('reqDateError').style.display = 'none';
+    document.getElementById('reqPlanError').style.display = 'none';
     document.getElementById('reqSubmitError').style.display = 'none';
     go('company-request');
+  }
+
+  // Priority handling is the one thing actually tied to a paid plan - the
+  // plan picker only appears (and is only required) once a company asks for
+  // priority, instead of being a mandatory upfront choice for everyone.
+  function togglePriorityPlanPicker(){
+    const checked = document.getElementById('reqPriorityCheck').checked;
+    document.getElementById('reqPlanPicker').style.display = checked ? 'block' : 'none';
+    if(!checked){
+      reqSelectedPlan = null;
+      document.querySelectorAll('#reqPlanPicker .plan-card').forEach(c=>c.classList.remove('on'));
+      document.getElementById('reqPlanError').style.display = 'none';
+    }
+  }
+  function pickRequestPlan(plan){
+    reqSelectedPlan = plan;
+    document.querySelectorAll('#reqPlanPicker .plan-card').forEach(c=>c.classList.remove('on'));
+    document.getElementById('reqPlanCard-'+plan).classList.add('on');
+    document.getElementById('reqPlanError').style.display = 'none';
   }
 
   // Clones the same canonical specialisation list the lawyer-application
@@ -2263,9 +2252,11 @@
   async function submitConsultationRequest(){
     const areasErr = document.getElementById('reqAreasError');
     const dateErr = document.getElementById('reqDateError');
+    const planErr = document.getElementById('reqPlanError');
     const submitErr = document.getElementById('reqSubmitError');
     areasErr.style.display = 'none';
     dateErr.style.display = 'none';
+    planErr.style.display = 'none';
     submitErr.style.display = 'none';
 
     if(reqSelectedAreas.size === 0){
@@ -2279,6 +2270,15 @@
       dateErr.style.display = 'block';
       return;
     }
+    const priorityClient = document.getElementById('reqPriorityCheck').checked;
+    if(priorityClient && !reqSelectedPlan){
+      planErr.style.display = 'block';
+      return;
+    }
+    // Priority = subscribed, matching that plan's rate bucket from here on;
+    // anyone not asking for priority stays on standard pay-per-case rates.
+    companyPlan = priorityClient ? reqSelectedPlan : 'payg';
+    saveState();
 
     // Read by canonical English label (via I18N_DICT), not textContent, so
     // this still works correctly if the page is currently showing Hindi.
@@ -2286,7 +2286,6 @@
       const entry = I18N_DICT[key];
       return entry ? entry.en : key;
     });
-    const priorityClient = document.getElementById('reqPriorityCheck').checked;
     const channel = reqSelectedChannel;
 
     requireVerification(async ()=>{
@@ -2296,13 +2295,13 @@
         }});
         // requireVerification() may have routed through the OTP screen first
         // (a fresh signup mid-submission) - make sure this screen is the one
-        // actually showing before writing the success state into it.
+        // actually showing before swapping in the success state. Toggling
+        // visibility (not replacing the form's innerHTML) so the form itself
+        // still exists intact if this screen is ever visited again this
+        // session (e.g. submitting a second request later).
         go('company-request');
-        document.querySelector('#screen-company-request .card').innerHTML = `
-          <div class="pending-box" style="background:var(--sage-l);border-color:#cfe0cb">
-            <div><strong>Request submitted.</strong> Fair Counsel's admin team will review it and match you with a verified lawyer. You'll get a notification the moment that happens.</div>
-          </div>
-          <button class="btn btn-ghost" style="margin-top:16px" onclick="goMyCases()">Go to My Cases</button>`;
+        document.getElementById('reqFormContent').style.display = 'none';
+        document.getElementById('reqSuccessState').style.display = 'block';
       }catch(e){
         submitErr.textContent = e.message || 'Could not submit your request right now.';
         submitErr.style.display = 'block';
@@ -3149,8 +3148,6 @@
     typeCoH: { en: `Company / Business`, hi: `कंपनी / व्यवसाय` },
     typeCoP: { en: `I need ongoing legal support for my business, contracts, compliance, recurring filings, under commercial rates.`, hi: `मुझे अपने व्यवसाय के लिए निरंतर कानूनी सहायता चाहिए, अनुबंध, अनुपालन, नियमित फाइलिंग, व्यावसायिक दरों पर।` },
     typeCoCta: { en: `Continue as a company →`, hi: `कंपनी के रूप में जारी रखें →` },
-    planH2: { en: `Choose how your company works with Fair Counsel`, hi: `चुनें कि आपकी कंपनी फेयर काउंसल के साथ कैसे काम करेगी` },
-    planSub: { en: `Company rates apply either way. A subscription reduces your per-case cost if you expect regular work.`, hi: `कंपनी दरें दोनों ही तरीकों में लागू होंगी। यदि आपको नियमित काम की उम्मीद है तो सब्सक्रिप्शन आपकी प्रति-मामला लागत को कम करता है।` },
     planBasicName: { en: `Basic`, hi: `बेसिक` },
     perMonth: { en: ` /month`, hi: ` /माह` },
     planBasic1: { en: `2 consultations included`, hi: `2 परामर्श शामिल` },
@@ -3166,8 +3163,6 @@
     planEnt2: { en: `Negotiated drafting rates`, hi: `बातचीत से तय ड्राफ्टिंग दरें` },
     planEnt3: { en: `Dedicated legal team`, hi: `समर्पित कानूनी टीम` },
     planEnt4: { en: `Monthly compliance calendar`, hi: `मासिक अनुपालन कैलेंडर` },
-    subscribeBtn: { en: `Subscribe & continue`, hi: `सब्सक्राइब करें और जारी रखें` },
-    noSubBtn: { en: `Continue without subscribing, pay per case`, hi: `बिना सब्सक्राइब किए जारी रखें, प्रति मामला भुगतान करें` },
     verifyH2: { en: `Verify your phone number`, hi: `अपना फ़ोन नंबर सत्यापित करें` },
     verifySub: { en: `We use this to send booking confirmations and case updates.`, hi: `हम इसका उपयोग बुकिंग पुष्टि और मामले से जुड़ी जानकारी भेजने के लिए करते हैं।` },
     fullName: { en: `Full name`, hi: `पूरा नाम` },
