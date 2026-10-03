@@ -62,7 +62,12 @@ router.post('/send-otp', otpSendLimiter, async (req, res) => {
   const sendResult = await sendOtp(phone, code, otpChannel);
 
   const response = { otpId: record.id, expiresInSeconds: OTP_TTL_MS / 1000, channel: sendResult.channel || otpChannel };
-  if (process.env.NODE_ENV !== 'production' && sendResult.testMode) {
+  // Show the code on-screen whenever delivery is genuinely simulated
+  // (sendResult.testMode, meaning no real WhatsApp/SMS provider is
+  // configured) - not gated on NODE_ENV, since a real deployment with no
+  // provider set up yet is exactly the situation this exists for. Once a
+  // real provider is configured, testMode is false and this never fires.
+  if (sendResult.testMode) {
     response.devOtp = code;
     response.note = `devOtp is only present because no ${otpChannel} provider is configured (test mode). Remove before going live.`;
   }
@@ -132,7 +137,12 @@ router.post('/lawyer/send-otp', otpSendLimiter, async (req, res) => {
   const sendResult = await sendOtp(phone, code, otpChannel);
 
   const response = { otpId: record.id, expiresInSeconds: OTP_TTL_MS / 1000, channel: sendResult.channel || otpChannel };
-  if (process.env.NODE_ENV !== 'production' && sendResult.testMode) {
+  // Show the code on-screen whenever delivery is genuinely simulated
+  // (sendResult.testMode, meaning no real WhatsApp/SMS provider is
+  // configured) - not gated on NODE_ENV, since a real deployment with no
+  // provider set up yet is exactly the situation this exists for. Once a
+  // real provider is configured, testMode is false and this never fires.
+  if (sendResult.testMode) {
     response.devOtp = code;
     response.note = `devOtp is only present because no ${otpChannel} provider is configured (test mode). Remove before going live.`;
   }

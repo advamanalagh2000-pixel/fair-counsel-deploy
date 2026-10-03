@@ -806,7 +806,7 @@
       </div>
 
       <div id="loginStep2" style="display:none">
-        <p class="revision-note" id="otpBackendNote" style="display:none"></p>
+        <div id="otpBackendNote" style="display:none;margin-bottom:14px"></div>
         <p class="revision-note"><span id="otpChannelIcon">🟢</span> <span data-i18n="otpSentVia1">OTP sent via</span> <strong id="otpChannelLabel">WhatsApp</strong> <span data-i18n="otpSentVia2">to</span> <span id="otpPhoneEcho" class="mono"></span>.</p>
         <div class="otp-row" role="group" aria-label="Enter 4-digit OTP">
           <input type="text" inputmode="numeric" maxlength="1" class="otp-box" id="otpBox0" aria-label="OTP digit 1" oninput="otpAdvance(this,1)">
@@ -1788,7 +1788,7 @@
         <div class="gate-note">Not applied yet? <a href="#" onclick="closeLawyerGate();enterLawyerPortal();return false;">Apply to join Fair Counsel</a> first, then log in here once approved.</div>
       </div>
       <div id="lawGateStep2" style="display:none">
-        <p class="revision-note" id="lawGateBackendNote" style="display:none"></p>
+        <div id="lawGateBackendNote" style="display:none;margin-bottom:14px"></div>
         <p class="revision-note">OTP sent to <span id="lawGatePhoneEcho" class="mono"></span>.</p>
         <div class="otp-row" role="group" aria-label="Enter 4-digit OTP">
           <input type="text" inputmode="numeric" maxlength="1" class="law-otp-box" id="lawOtpBox0" aria-label="OTP digit 1" oninput="lawOtpAdvance(this,1)">
@@ -2430,10 +2430,15 @@
       const sentChannelLabel = res.channel === 'sms' ? 'SMS' : 'WhatsApp';
       if(res.devOtp){
         note.style.display = 'block';
-        note.textContent = `Sent by the real backend via ${sentChannelLabel}, dev mode shows the code here since no ${sentChannelLabel} provider is configured yet: ${res.devOtp}`;
+        note.innerHTML = `
+          <div class="pending-box" style="background:var(--sage-l);border-color:#cfe0cb">
+            <div>
+              <strong>No ${sentChannelLabel} provider is set up yet, so nothing was actually sent.</strong>
+              <div style="margin-top:4px">Your code for this login: <span class="mono" style="font-size:20px;font-weight:700;letter-spacing:3px;color:var(--navy)">${res.devOtp}</span></div>
+            </div>
+          </div>`;
       } else {
-        note.style.display = 'block';
-        note.textContent = `OTP sent by the real backend via ${sentChannelLabel}.`;
+        note.style.display = 'none';
       }
     }catch(e){
       // Backend unreachable or rejected the request — fall back to the local
@@ -2441,7 +2446,7 @@
       otpBackendMode = false;
       const note = document.getElementById('otpBackendNote');
       note.style.display = 'block';
-      note.textContent = 'Backend not reachable, running in local demo mode. Use 1234.';
+      note.innerHTML = `<div class="pending-box" style="background:var(--sage-l);border-color:#cfe0cb"><div><strong>Backend not reachable, running in local demo mode.</strong> Use <span class="mono" style="font-weight:700">1234</span>.</div></div>`;
     }
     saveState();
   }
@@ -4420,8 +4425,15 @@
       document.getElementById('lawOtpBox0').focus();
       const note = document.getElementById('lawGateBackendNote');
       if(res.devOtp){
+        const sentChannelLabel = res.channel === 'sms' ? 'SMS' : 'WhatsApp';
         note.style.display = 'block';
-        note.textContent = `Dev mode shows the code here since no ${res.channel === 'sms' ? 'SMS' : 'WhatsApp'} provider is configured yet: ${res.devOtp}`;
+        note.innerHTML = `
+          <div class="pending-box" style="background:var(--sage-l);border-color:#cfe0cb">
+            <div>
+              <strong>No ${sentChannelLabel} provider is set up yet, so nothing was actually sent.</strong>
+              <div style="margin-top:4px">Your code for this login: <span class="mono" style="font-size:20px;font-weight:700;letter-spacing:3px;color:var(--navy)">${res.devOtp}</span></div>
+            </div>
+          </div>`;
       } else {
         note.style.display = 'none';
       }
