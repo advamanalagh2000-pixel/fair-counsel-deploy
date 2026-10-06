@@ -1,107 +1,40 @@
 const express = require('express');
-const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { prisma, serializeLawyer } = require('../prisma');
-const { sendOtp } = require('../services/smsProvider');
 const { signSession, requireAuth, JWT_SECRET } = require('../middleware/auth');
 const { verifyTotpCode } = require('../services/totp');
-const { otpSendLimiter, loginLimiter } = require('../middleware/rateLimit');
+const { loginLimiter } = require('../middleware/rateLimit');
 const { logAudit } = require('../services/auditLog');
 
 const router = express.Router();
 
-const OTP_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const OTP_MAX_ATTEMPTS = 3;
-const RESEND_COOLDOWN_MS = 30 * 1000;
+/**
+ * No phone/email verification step - a phone number alone creates or logs
+ * into an account. This is a deliberate, known tradeoff (see the commit
+ * that removed OTP): without a real WhatsApp/SMS/email provider configured,
+ * OTP was a hard wall nobody could get past, so verification was dropped
+ * entirely rather than faked. Anyone who knows a phone number can act as
+ * that account - acceptable for now, not for handling real client money
+ * without a real verification channel in front of it again.
+ */
 
-function generateOtp() {
-  return String(crypto.randomInt(1000, 10000)); // 4-digit
-}
-
-async function issueOtp({ phone, purpose, pendingProfile }, res) {
-  const recent = await prisma.otp.findFirst({
-    where: { phone, consumed: false },
-    orderBy: { createdAt: 'desc' }
-  });
-  if (recent && Date.now() - recent.createdAt.getTime() < RESEND_COOLDOWN_MS) {
-    const waitMs = RESEND_COOLDOWN_MS - (Date.now() - recent.createdAt.getTime());
-    res.status(429).json({ error: 'Please wait before requesting another OTP', retryAfterMs: waitMs });
-    return null;
-  }
-
-  // Invalidate any prior unconsumed OTPs for this phone/purpose so only the latest is valid.
-  await prisma.otp.updateMany({ where: { phone, consumed: false }, data: { consumed: true } });
-
-  const code = generateOtp();
-  const codeHash = bcrypt.hashSync(code, 8);
-  const record = await prisma.otp.create({
-    data: {
-      phone,
-      codeHash,
-      purpose,
-      expiresAt: new Date(Date.now() + OTP_TTL_MS),
-      pendingProfile: pendingProfile ? JSON.stringify(pendingProfile) : null
-    }
-  });
-  return { record, code };
-}
-
-/** POST /api/auth/send-otp  { phone, name?, clientType?, companyName?, gstin?, channel? } — client login/signup */
-router.post('/send-otp', otpSendLimiter, async (req, res) => {
-  const { phone, name, clientType, companyName, gstin, channel } = req.body || {};
+/** POST /api/auth/login  { phone, name?, clientType?, companyName?, gstin? } — client login/signup, no verification */
+router.post('/login', loginLimiter, async (req, res) => {
+  const { phone, name, clientType, companyName, gstin } = req.body || {};
   if (!phone || !/^\d{10}$/.test(phone)) {
     return res.status(400).json({ error: 'Provide a valid 10-digit phone number' });
   }
-  const otpChannel = channel === 'sms' ? 'sms' : 'whatsapp'; // WhatsApp is the default
 
-  const issued = await issueOtp({ phone, purpose: 'client', pendingProfile: { name, clientType, companyName, gstin } }, res);
-  if (!issued) return;
-  const { record, code } = issued;
-
-  const sendResult = await sendOtp(phone, code, otpChannel);
-
-  const response = { otpId: record.id, expiresInSeconds: OTP_TTL_MS / 1000, channel: sendResult.channel || otpChannel };
-  // Show the code on-screen whenever delivery is genuinely simulated
-  // (sendResult.testMode, meaning no real WhatsApp/SMS provider is
-  // configured) - not gated on NODE_ENV, since a real deployment with no
-  // provider set up yet is exactly the situation this exists for. Once a
-  // real provider is configured, testMode is false and this never fires.
-  if (sendResult.testMode) {
-    response.devOtp = code;
-    response.note = `devOtp is only present because no ${otpChannel} provider is configured (test mode). Remove before going live.`;
-  }
-  res.json(response);
-});
-
-/** POST /api/auth/verify-otp  { otpId, code } — client login/signup */
-router.post('/verify-otp', loginLimiter, async (req, res) => {
-  const { otpId, code } = req.body || {};
-  const record = await prisma.otp.findUnique({ where: { id: otpId } });
-  if (!record || record.purpose !== 'client' || record.consumed) return res.status(400).json({ error: 'Invalid or already-used OTP request' });
-  if (record.expiresAt.getTime() < Date.now()) return res.status(400).json({ error: 'OTP expired, request a new one' });
-  if (record.attempts >= OTP_MAX_ATTEMPTS) return res.status(429).json({ error: 'Too many incorrect attempts, request a new OTP' });
-
-  const ok = bcrypt.compareSync(String(code || ''), record.codeHash);
-  if (!ok) {
-    const attempts = record.attempts + 1;
-    await prisma.otp.update({ where: { id: record.id }, data: { attempts } });
-    const remaining = OTP_MAX_ATTEMPTS - attempts;
-    return res.status(400).json({ error: 'Incorrect OTP', attemptsRemaining: Math.max(remaining, 0) });
-  }
-
-  await prisma.otp.update({ where: { id: record.id }, data: { consumed: true } });
-
-  const pendingProfile = record.pendingProfile ? JSON.parse(record.pendingProfile) : {};
-  let user = await prisma.user.findUnique({ where: { phone: record.phone } });
+  let user = await prisma.user.findUnique({ where: { phone } });
   if (!user) {
     user = await prisma.user.create({
       data: {
-        phone: record.phone,
-        name: pendingProfile.name || '',
-        clientType: pendingProfile.clientType || 'individual',
-        companyName: pendingProfile.companyName || null,
-        gstin: pendingProfile.gstin || null
+        phone,
+        name: name || '',
+        clientType: clientType || 'individual',
+        companyName: companyName || null,
+        gstin: gstin || null
       }
     });
     logAudit('info', `New user registered: ${user.phone}`);
@@ -111,13 +44,12 @@ router.post('/verify-otp', loginLimiter, async (req, res) => {
   res.json({ token, user });
 });
 
-/** POST /api/auth/lawyer/send-otp  { phone, channel? } — lawyer login for already-applied lawyers */
-router.post('/lawyer/send-otp', otpSendLimiter, async (req, res) => {
-  const { phone, channel } = req.body || {};
+/** POST /api/auth/lawyer/login  { phone } — lawyer login for already-applied lawyers, no verification */
+router.post('/lawyer/login', loginLimiter, async (req, res) => {
+  const { phone } = req.body || {};
   if (!phone || !/^\d{10}$/.test(phone)) {
     return res.status(400).json({ error: 'Provide a valid 10-digit phone number' });
   }
-  const otpChannel = channel === 'sms' ? 'sms' : 'whatsapp';
 
   const lawyer = await prisma.lawyer.findUnique({ where: { phone } });
   if (!lawyer) {
@@ -129,49 +61,10 @@ router.post('/lawyer/send-otp', otpSendLimiter, async (req, res) => {
   if (lawyer.status === 'rejected') {
     return res.status(403).json({ error: `Your application was not approved${lawyer.rejectionReason ? `: ${lawyer.rejectionReason}` : '.'}` });
   }
-
-  const issued = await issueOtp({ phone, purpose: 'lawyer' }, res);
-  if (!issued) return;
-  const { record, code } = issued;
-
-  const sendResult = await sendOtp(phone, code, otpChannel);
-
-  const response = { otpId: record.id, expiresInSeconds: OTP_TTL_MS / 1000, channel: sendResult.channel || otpChannel };
-  // Show the code on-screen whenever delivery is genuinely simulated
-  // (sendResult.testMode, meaning no real WhatsApp/SMS provider is
-  // configured) - not gated on NODE_ENV, since a real deployment with no
-  // provider set up yet is exactly the situation this exists for. Once a
-  // real provider is configured, testMode is false and this never fires.
-  if (sendResult.testMode) {
-    response.devOtp = code;
-    response.note = `devOtp is only present because no ${otpChannel} provider is configured (test mode). Remove before going live.`;
-  }
-  res.json(response);
-});
-
-/** POST /api/auth/lawyer/verify-otp  { otpId, code } — lawyer login */
-router.post('/lawyer/verify-otp', loginLimiter, async (req, res) => {
-  const { otpId, code } = req.body || {};
-  const record = await prisma.otp.findUnique({ where: { id: otpId } });
-  if (!record || record.purpose !== 'lawyer' || record.consumed) return res.status(400).json({ error: 'Invalid or already-used OTP request' });
-  if (record.expiresAt.getTime() < Date.now()) return res.status(400).json({ error: 'OTP expired, request a new one' });
-  if (record.attempts >= OTP_MAX_ATTEMPTS) return res.status(429).json({ error: 'Too many incorrect attempts, request a new OTP' });
-
-  const ok = bcrypt.compareSync(String(code || ''), record.codeHash);
-  if (!ok) {
-    const attempts = record.attempts + 1;
-    await prisma.otp.update({ where: { id: record.id }, data: { attempts } });
-    const remaining = OTP_MAX_ATTEMPTS - attempts;
-    return res.status(400).json({ error: 'Incorrect OTP', attemptsRemaining: Math.max(remaining, 0) });
-  }
-
-  await prisma.otp.update({ where: { id: record.id }, data: { consumed: true } });
-
-  const lawyer = await prisma.lawyer.findUnique({ where: { phone: record.phone } });
   // A suspended lawyer can still log in and see their existing cases -
   // suspension only blocks new bookings (cases.js gates that on
   // status === 'verified' separately), it isn't a full account lockout.
-  if (!lawyer || (lawyer.status !== 'verified' && lawyer.status !== 'suspended')) {
+  if (lawyer.status !== 'verified' && lawyer.status !== 'suspended') {
     return res.status(403).json({ error: 'This lawyer account is no longer eligible to log in' });
   }
 

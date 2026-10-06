@@ -341,10 +341,8 @@
   .plan-list li::before{content:'✓ ';color:var(--sage);font-weight:700;}
   .sub-actions{display:flex;justify-content:center;gap:14px;margin-top:28px;}
 
-  /* LOGIN / OTP */
+  /* LOGIN */
   .login-card{max-width:420px;margin:60px auto;}
-  .otp-row{display:flex;gap:8px;margin-top:6px;}
-  .otp-row input{text-align:center;font-family:'IBM Plex Mono',monospace;font-size:16px;letter-spacing:2px;}
 
   /* HEADER EXTRAS */
   .icon-btn{background:transparent;border:1px solid var(--line);border-radius:2px;padding:8px 10px;color:var(--navy);position:relative;font-size:13px;}
@@ -410,9 +408,6 @@
   .chat-opt{display:flex;align-items:center;gap:9px;text-align:left;padding:10px 12px;border:1px solid var(--line);border-radius:7px;background:var(--white);font-size:12.5px;color:#2a2a2a;cursor:pointer;font-family:inherit;}
   .chat-opt:hover{border-color:var(--navy);background:var(--paper-2);}
   .chat-opt-icon{font-size:15px;flex-shrink:0;}
-  .channel-pick{display:flex;gap:8px;margin-top:6px;}
-  .channel-opt{flex:1;padding:9px;border:1px solid var(--line);border-radius:2px;background:var(--white);font-size:12px;text-align:center;cursor:pointer;color:#4a4a52;}
-  .channel-opt.on{background:var(--navy);color:white;border-color:var(--navy);}
 
   /* TRANSPARENCY BADGE */
   .trans-badge{display:inline-flex;align-items:center;gap:8px;background:var(--sage-l);color:var(--sage);border-radius:20px;padding:7px 16px;font-size:12.5px;font-weight:600;margin-bottom:18px;}
@@ -535,7 +530,6 @@
   /* OTP */
   .otp-error{display:none;color:var(--brick);font-size:12.5px;margin-top:8px;}
   .otp-error.show{display:block;}
-  .otp-row input.err{border-color:var(--brick);}
 
   /* ADMIN GATE */
   .gate-wrap{max-width:340px;margin:0 auto;text-align:left;}
@@ -776,8 +770,8 @@
   <!-- SCREEN 0.5: LOGIN / OTP -->
   <section class="screen" id="screen-login">
     <div class="card login-card">
-      <h2 class="section-title serif" style="margin-bottom:4px" data-i18n="verifyH2">Verify your phone number</h2>
-      <p class="section-sub" data-i18n="verifySub">We use this to send booking confirmations and case updates.</p>
+      <h2 class="section-title serif" style="margin-bottom:4px">Sign in</h2>
+      <p class="section-sub">We use this to send booking confirmations and case updates.</p>
 
       <div id="loginStep1">
         <div class="field" style="margin-bottom:12px">
@@ -796,34 +790,10 @@
           <label data-i18n="mobileLabel">Mobile number</label>
           <input type="text" id="loginPhone" placeholder="98XXXXXX10">
         </div>
-        <div class="field" style="margin-bottom:16px">
-          <label data-i18n="sendUpdatesVia">Send case updates via</label>
-          <div class="channel-pick" id="channelPick">
-            <div class="channel-opt on" onclick="pickChannel(this,'WhatsApp')">🟢 <span data-i18n="whatsapp">WhatsApp</span></div>
-            <div class="channel-opt" onclick="pickChannel(this,'SMS')"><span data-i18n="sms">SMS</span></div>
-            <div class="channel-opt" onclick="pickChannel(this,'Email')"><span data-i18n="email">Email</span></div>
-          </div>
-          <p style="font-size:11.5px;color:#6b6858;margin:6px 0 0" data-i18n="otpChannelNote">Your one-time verification code will also be sent this way (Email isn't used for OTPs; WhatsApp is used instead).</p>
-        </div>
         <label style="font-size:11.5px;color:#6b6858;display:flex;align-items:flex-start;gap:7px;margin-bottom:14px"><input type="checkbox" id="dataConsentCheck" style="margin-top:2px"> <span>I agree to Fair Counsel collecting and processing my phone number, name, and case details as described in the <a href="#" onclick="openLegal('privacy');return false;" style="color:var(--navy)">Privacy Policy</a>, to connect me with a lawyer and process my case.</span></label>
-        <p class="otp-error" id="consentError">Please confirm you agree before we can send your OTP.</p>
-        <button class="btn btn-primary btn-block" onclick="sendOtp()" data-i18n="sendOtpBtn">Send OTP</button>
-      </div>
-
-      <div id="loginStep2" style="display:none">
-        <div id="otpBackendNote" style="display:none;margin-bottom:14px"></div>
-        <p class="revision-note"><span id="otpChannelIcon">🟢</span> <span data-i18n="otpSentVia1">OTP sent via</span> <strong id="otpChannelLabel">WhatsApp</strong> <span data-i18n="otpSentVia2">to</span> <span id="otpPhoneEcho" class="mono"></span>.</p>
-        <div class="otp-row" role="group" aria-label="Enter 4-digit OTP">
-          <input type="text" inputmode="numeric" maxlength="1" class="otp-box" id="otpBox0" aria-label="OTP digit 1" oninput="otpAdvance(this,1)">
-          <input type="text" inputmode="numeric" maxlength="1" class="otp-box" id="otpBox1" aria-label="OTP digit 2" oninput="otpAdvance(this,2)">
-          <input type="text" inputmode="numeric" maxlength="1" class="otp-box" id="otpBox2" aria-label="OTP digit 3" oninput="otpAdvance(this,3)">
-          <input type="text" inputmode="numeric" maxlength="1" class="otp-box" id="otpBox3" aria-label="OTP digit 4" oninput="otpAdvance(this,4)">
-        </div>
-        <p class="otp-error" id="otpError"></p>
-        <button class="btn btn-primary btn-block" style="margin-top:16px" id="verifyOtpBtn" onclick="verifyOtp()" data-i18n="verifyContinueBtn">Verify & continue</button>
-        <p class="revision-note" id="resendRow" style="display:none;text-align:center">
-          <button class="msg-preview-toggle" onclick="resendOtp()" data-i18n="resendOtpBtn">Resend OTP</button>
-        </p>
+        <p class="otp-error" id="consentError">Please confirm you agree before continuing.</p>
+        <p class="otp-error" id="loginError"></p>
+        <button class="btn btn-primary btn-block" onclick="clientLogin()">Continue</button>
       </div>
     </div>
   </section>
@@ -1786,23 +1756,11 @@
         <p class="section-sub" style="margin-top:0">Log in with the mobile number on your approved Fair Counsel application.</p>
         <div class="field" style="margin-bottom:14px">
           <label for="lawGatePhone">Mobile number</label>
-          <input type="text" id="lawGatePhone" placeholder="98XXXXXX02" inputmode="numeric" onkeydown="if(event.key==='Enter'){sendLawyerOtp();}">
+          <input type="text" id="lawGatePhone" placeholder="98XXXXXX02" inputmode="numeric" onkeydown="if(event.key==='Enter'){lawyerLogin();}">
         </div>
         <p class="otp-error show" id="lawGateStep1Error" style="display:none"></p>
-        <button class="btn btn-primary btn-block" onclick="sendLawyerOtp()">Send OTP</button>
+        <button class="btn btn-primary btn-block" onclick="lawyerLogin()">Sign in</button>
         <div class="gate-note">Not applied yet? <a href="#" onclick="closeLawyerGate();enterLawyerPortal();return false;">Apply to join Fair Counsel</a> first, then log in here once approved.</div>
-      </div>
-      <div id="lawGateStep2" style="display:none">
-        <div id="lawGateBackendNote" style="display:none;margin-bottom:14px"></div>
-        <p class="revision-note">OTP sent to <span id="lawGatePhoneEcho" class="mono"></span>.</p>
-        <div class="otp-row" role="group" aria-label="Enter 4-digit OTP">
-          <input type="text" inputmode="numeric" maxlength="1" class="law-otp-box" id="lawOtpBox0" aria-label="OTP digit 1" oninput="lawOtpAdvance(this,1)">
-          <input type="text" inputmode="numeric" maxlength="1" class="law-otp-box" id="lawOtpBox1" aria-label="OTP digit 2" oninput="lawOtpAdvance(this,2)">
-          <input type="text" inputmode="numeric" maxlength="1" class="law-otp-box" id="lawOtpBox2" aria-label="OTP digit 3" oninput="lawOtpAdvance(this,3)">
-          <input type="text" inputmode="numeric" maxlength="1" class="law-otp-box" id="lawOtpBox3" aria-label="OTP digit 4" oninput="lawOtpAdvance(this,4)">
-        </div>
-        <p class="otp-error" id="lawGateStep2Error"></p>
-        <button class="btn btn-primary btn-block" style="margin-top:16px" id="lawVerifyOtpBtn" onclick="verifyLawyerOtp()">Verify &amp; continue</button>
       </div>
     </div>
   </div>
@@ -2365,14 +2323,14 @@
     document.getElementById('gstFieldLogin').style.display = clientType==='company' ? 'block' : 'none';
     document.querySelectorAll('main.wrap .screen').forEach(s=>s.classList.remove('active'));
     document.getElementById('screen-login').classList.add('active');
-    document.getElementById('loginStep1').style.display = 'block';
-    document.getElementById('loginStep2').style.display = 'none';
+    document.getElementById('loginError').classList.remove('show');
     window.scrollTo({top:0, behavior:'smooth'});
   }
 
-  // Gate for anything that requires a verified phone number (currently: seeing the lawyer shortlist).
-  // If already verified this session, runs afterFn immediately; otherwise shows the verify screen first
-  // and runs afterFn once verifyOtp() succeeds.
+  // Gate for anything that requires a logged-in client (currently: requesting
+  // an appointment, raising a ticket, submitting a consultation request).
+  // If already logged in this session, runs afterFn immediately; otherwise
+  // shows the login screen first and runs afterFn once clientLogin() succeeds.
   function requireVerification(afterFn){
     if(loggedIn){
       afterFn();
@@ -2382,12 +2340,13 @@
     showVerifyScreen();
   }
 
-  let otpAttempts = 0;
-  const OTP_MAX_ATTEMPTS = 3;
-  let currentOtpId = null;   // set once the backend accepts a send-otp request
-  let otpBackendMode = false; // true once we know the backend is handling this OTP
-
-  async function sendOtp(){
+  // No phone verification step - entering a phone number alone creates or
+  // logs into an account, same real backend session either way, just no
+  // code to enter. Deliberate tradeoff made after WhatsApp/SMS OTP turned
+  // out to be a hard wall with no real delivery provider configured - see
+  // the backend commit that removed it. Not safe for real customer money
+  // without a real verification channel back in front of this.
+  async function clientLogin(){
     const consentBox = document.getElementById('dataConsentCheck');
     if(consentBox && !consentBox.checked){
       document.getElementById('consentError').classList.add('show');
@@ -2395,145 +2354,50 @@
       return;
     }
     document.getElementById('consentError').classList.remove('show');
+    const errEl = document.getElementById('loginError');
+    errEl.classList.remove('show');
     const phoneRaw = document.getElementById('loginPhone').value || '';
-    const phone = phoneRaw.replace(/\D/g,'') || '9812345678';
-    const otpChannel = preferredChannel === 'SMS' ? 'sms' : 'whatsapp'; // WhatsApp default; Email isn't a valid OTP channel so it also falls back to WhatsApp
-    document.getElementById('otpPhoneEcho').textContent = phoneRaw || phone;
-    document.getElementById('loginStep1').style.display = 'none';
-    document.getElementById('loginStep2').style.display = 'block';
-    otpAttempts = 0;
-    currentOtpId = null;
-    otpBackendMode = false;
-    document.getElementById('otpError').classList.remove('show');
-    document.getElementById('resendRow').style.display = 'none';
-    document.getElementById('verifyOtpBtn').disabled = false;
-    document.querySelectorAll('.otp-box').forEach(b=>{ b.value=''; b.classList.remove('err'); b.disabled=false; });
-    document.getElementById('otpBox0').focus();
-
-    const channelLabel = otpChannel === 'whatsapp' ? 'WhatsApp' : 'SMS';
-    document.getElementById('otpChannelLabel').textContent = channelLabel;
-    document.getElementById('otpChannelIcon').textContent = otpChannel === 'whatsapp' ? '🟢' : '💬';
+    const phone = phoneRaw.replace(/\D/g,'');
+    if(!/^\d{10}$/.test(phone)){
+      errEl.textContent = 'Enter a valid 10-digit mobile number.';
+      errEl.classList.add('show');
+      return;
+    }
 
     try{
-      const res = await api('/auth/send-otp', { method:'POST', body:{
+      const res = await api('/auth/login', { method:'POST', body:{
         phone,
         name: document.getElementById('loginName').value,
         clientType,
         companyName: document.getElementById('loginCompany') ? document.getElementById('loginCompany').value : undefined,
-        gstin: document.getElementById('loginGST') ? document.getElementById('loginGST').value : undefined,
-        channel: otpChannel
+        gstin: document.getElementById('loginGST') ? document.getElementById('loginGST').value : undefined
       }});
-      currentOtpId = res.otpId;
-      otpBackendMode = true;
-      const note = document.getElementById('otpBackendNote');
-      const sentChannelLabel = res.channel === 'sms' ? 'SMS' : 'WhatsApp';
-      if(res.devOtp){
-        note.style.display = 'block';
-        note.innerHTML = `
-          <div class="pending-box" style="background:var(--sage-l);border-color:#cfe0cb">
-            <div>
-              <strong>No ${sentChannelLabel} provider is set up yet, so nothing was actually sent.</strong>
-              <div style="margin-top:4px">Your code for this login: <span class="mono" style="font-size:20px;font-weight:700;letter-spacing:3px;color:var(--navy)">${res.devOtp}</span></div>
-            </div>
-          </div>`;
-      } else {
-        note.style.display = 'none';
-      }
+      authToken = res.token;
+      loggedIn = true;
+      loginName = res.user.name || loginName;
+      loginPhone = res.user.phone || loginPhone;
+      showClientStepper();
+      document.getElementById('myCasesLink').style.display = 'inline-block';
+      saveState();
+      refreshNotifDot();
+      showToast('Signed in, real backend session created.');
     }catch(e){
-      // Backend unreachable or rejected the request — fall back to the local
-      // prototype simulation so the demo still works without the server running.
-      otpBackendMode = false;
-      const note = document.getElementById('otpBackendNote');
-      note.style.display = 'block';
-      note.innerHTML = `<div class="pending-box" style="background:var(--sage-l);border-color:#cfe0cb"><div><strong>Backend not reachable, running in local demo mode.</strong> Use <span class="mono" style="font-weight:700">1234</span>.</div></div>`;
-    }
-    saveState();
-  }
-
-  function resendOtp(){
-    sendOtp();
-    showToast(otpBackendMode ? 'A new OTP has been sent by the backend.' : 'A new OTP has been sent (local demo mode, use 1234).');
-  }
-
-  function otpAdvance(el, nextIndex){
-    el.value = el.value.replace(/\D/g,'').slice(0,1);
-    el.classList.remove('err');
-    if(el.value && nextIndex < 4){
-      document.getElementById('otpBox'+nextIndex).focus();
-    }
-  }
-
-  async function verifyOtp(){
-    const boxes = document.querySelectorAll('.otp-box');
-    const code = Array.from(boxes).map(b=>b.value).join('');
-    const err = document.getElementById('otpError');
-
-    if(code.length < 4){
-      err.textContent = 'Enter all 4 digits.';
-      err.classList.add('show');
-      boxes.forEach(b=>{ if(!b.value) b.classList.add('err'); });
-      return;
-    }
-
-    if(otpBackendMode && currentOtpId){
-      try{
-        const res = await api('/auth/verify-otp', { method:'POST', body:{ otpId: currentOtpId, code } });
-        err.classList.remove('show');
-        authToken = res.token;
+      if(e.message === 'Failed to fetch'){
+        // Backend unreachable — fall back to the local prototype simulation
+        // so the demo still works without the server running.
         loggedIn = true;
-        loginName = res.user.name || loginName;
-        loginPhone = res.user.phone || loginPhone;
+        loginName = document.getElementById('loginName').value || loginName;
+        loginPhone = phoneRaw || loginPhone;
         showClientStepper();
         document.getElementById('myCasesLink').style.display = 'inline-block';
         saveState();
-        refreshNotifDot();
-        showToast('Phone verified, real backend session created.');
-        if(pendingVerifyAction){
-          const fn = pendingVerifyAction;
-          pendingVerifyAction = null;
-          fn();
-        } else {
-          browseLawyers();
-        }
-      }catch(e){
-        boxes.forEach(b=>{ b.classList.add('err'); b.value=''; });
-        document.getElementById('otpBox0').focus();
-        err.textContent = e.message || 'Incorrect OTP.';
-        err.classList.add('show');
-        if(e.data && typeof e.data.attemptsRemaining === 'number' && e.data.attemptsRemaining <= 0){
-          boxes.forEach(b=> b.disabled = true);
-          document.getElementById('verifyOtpBtn').disabled = true;
-          document.getElementById('resendRow').style.display = 'block';
-        }
-      }
-      return;
-    }
-
-    // Local demo-mode fallback (backend unreachable) — same behaviour as before.
-    if(code !== '1234'){
-      otpAttempts++;
-      boxes.forEach(b=>{ b.classList.add('err'); b.value=''; });
-      document.getElementById('otpBox0').focus();
-      if(otpAttempts >= OTP_MAX_ATTEMPTS){
-        err.textContent = 'Too many incorrect attempts. Request a new OTP to try again.';
-        err.classList.add('show');
-        boxes.forEach(b=> b.disabled = true);
-        document.getElementById('verifyOtpBtn').disabled = true;
-        document.getElementById('resendRow').style.display = 'block';
+        showToast('Backend not reachable, continuing in local demo mode.');
       } else {
-        err.textContent = `Incorrect OTP. ${OTP_MAX_ATTEMPTS - otpAttempts} attempt(s) left.`;
-        err.classList.add('show');
+        errEl.textContent = e.message || 'Could not sign in right now.';
+        errEl.classList.add('show');
+        return;
       }
-      return;
     }
-
-    err.classList.remove('show');
-    loggedIn = true;
-    loginName = document.getElementById('loginName').value || loginName;
-    loginPhone = document.getElementById('loginPhone').value || loginPhone;
-    showClientStepper();
-    document.getElementById('myCasesLink').style.display = 'inline-block';
-    saveState();
     if(pendingVerifyAction){
       const fn = pendingVerifyAction;
       pendingVerifyAction = null;
@@ -2542,6 +2406,7 @@
       browseLawyers();
     }
   }
+
 
   function reopenEntry(){
     document.getElementById('clientStepper').style.display = 'none';
@@ -2953,7 +2818,6 @@
       const state = {
         clientType, companyPlan, selectedPlan, loginName, loginPhone,
         currentLang, activeFilters, sortBy, currentPage,
-        preferredChannel,
         removedVerifyNames, removedDraftNames,
         adminAuditLog, ticketSubjects,
         lawyerApplied
@@ -2975,7 +2839,6 @@
       activeFilters = s.activeFilters || null;
       sortBy = s.sortBy || 'recommended';
       currentPage = s.currentPage || 1;
-      preferredChannel = s.preferredChannel || 'WhatsApp';
       removedVerifyNames = s.removedVerifyNames || [];
       removedDraftNames = s.removedDraftNames || [];
       adminAuditLog = s.adminAuditLog || [];
@@ -3163,22 +3026,10 @@
     planEnt2: { en: `Negotiated drafting rates`, hi: `बातचीत से तय ड्राफ्टिंग दरें` },
     planEnt3: { en: `Dedicated legal team`, hi: `समर्पित कानूनी टीम` },
     planEnt4: { en: `Monthly compliance calendar`, hi: `मासिक अनुपालन कैलेंडर` },
-    verifyH2: { en: `Verify your phone number`, hi: `अपना फ़ोन नंबर सत्यापित करें` },
-    verifySub: { en: `We use this to send booking confirmations and case updates.`, hi: `हम इसका उपयोग बुकिंग पुष्टि और मामले से जुड़ी जानकारी भेजने के लिए करते हैं।` },
     fullName: { en: `Full name`, hi: `पूरा नाम` },
     companyName: { en: `Company name`, hi: `कंपनी का नाम` },
     gstLabel: { en: `GSTIN (for invoicing)`, hi: `जीएसटीआईएन (चालान के लिए)` },
     mobileLabel: { en: `Mobile number`, hi: `मोबाइल नंबर` },
-    sendUpdatesVia: { en: `Send case updates via`, hi: `मामले की जानकारी इसके ज़रिए भेजें` },
-    whatsapp: { en: `WhatsApp`, hi: `व्हाट्सएप` },
-    sms: { en: `SMS`, hi: `एसएमएस` },
-    email: { en: `Email`, hi: `ईमेल` },
-    otpChannelNote: { en: `Your one-time verification code will also be sent this way (Email isn't used for OTPs; WhatsApp is used instead).`, hi: `आपका वन-टाइम सत्यापन कोड भी इसी तरीके से भेजा जाएगा (ईमेल पर OTP नहीं भेजा जाता; इसके बजाय व्हाट्सएप का उपयोग होता है)।` },
-    sendOtpBtn: { en: `Send OTP`, hi: `OTP भेजें` },
-    otpSentVia1: { en: `OTP sent via`, hi: `OTP भेजा गया` },
-    otpSentVia2: { en: `to`, hi: `इसके ज़रिए, यहाँ:` },
-    verifyContinueBtn: { en: `Verify & continue`, hi: `सत्यापित करें और जारी रखें` },
-    resendOtpBtn: { en: `Resend OTP`, hi: `OTP फिर से भेजें` },
     transBadge: { en: `✓ See the price before you book, always`, hi: `✓ बुक करने से पहले कीमत देखें, हमेशा` },
     eyebrowCase: { en: `Case file opens here`, hi: `यहाँ से केस फ़ाइल शुरू होती है` },
     searchH1: { en: `Find the right lawyer.<br>Skip the guesswork.`, hi: `सही वकील खोजें।<br>अंदाज़ा लगाना छोड़ें।`, html:true },
@@ -4390,10 +4241,7 @@
   }
 
   // ============== LAWYER LOGIN GATE (real OTP session, phone must belong to a verified lawyer) ==============
-  let lawyerOtpId = null;
   function openLawyerGate(){
-    document.getElementById('lawGateStep1').style.display = 'block';
-    document.getElementById('lawGateStep2').style.display = 'none';
     document.getElementById('lawGateStep1Error').style.display = 'none';
     document.getElementById('lawGatePhone').value = '';
     openModal('lawGateModal','lawGateOverlay');
@@ -4401,7 +4249,8 @@
   function closeLawyerGate(){
     closeModalGeneric('lawGateModal','lawGateOverlay');
   }
-  async function sendLawyerOtp(){
+  // No verification step - same tradeoff as the client login above.
+  async function lawyerLogin(){
     const phoneRaw = document.getElementById('lawGatePhone').value || '';
     const phone = phoneRaw.replace(/\D/g,'');
     const errEl = document.getElementById('lawGateStep1Error');
@@ -4411,64 +4260,19 @@
       return;
     }
     try{
-      const res = await api('/auth/lawyer/send-otp', { method:'POST', body:{ phone } });
-      lawyerOtpId = res.otpId;
-      document.getElementById('lawGatePhoneEcho').textContent = phoneRaw;
-      document.getElementById('lawGateStep1').style.display = 'none';
-      document.getElementById('lawGateStep2').style.display = 'block';
-      document.querySelectorAll('.law-otp-box').forEach(b=>{ b.value=''; b.classList.remove('err'); b.disabled=false; });
-      document.getElementById('lawOtpBox0').focus();
-      const note = document.getElementById('lawGateBackendNote');
-      if(res.devOtp){
-        const sentChannelLabel = res.channel === 'sms' ? 'SMS' : 'WhatsApp';
-        note.style.display = 'block';
-        note.innerHTML = `
-          <div class="pending-box" style="background:var(--sage-l);border-color:#cfe0cb">
-            <div>
-              <strong>No ${sentChannelLabel} provider is set up yet, so nothing was actually sent.</strong>
-              <div style="margin-top:4px">Your code for this login: <span class="mono" style="font-size:20px;font-weight:700;letter-spacing:3px;color:var(--navy)">${res.devOtp}</span></div>
-            </div>
-          </div>`;
-      } else {
-        note.style.display = 'none';
-      }
-    }catch(e){
-      errEl.textContent = e.message === 'Failed to fetch'
-        ? "Can't reach the backend right now, check that it's running, then try again."
-        : (e.message || 'Could not send OTP.');
-      errEl.style.display = 'block';
-    }
-  }
-  function lawOtpAdvance(el, nextIndex){
-    el.value = el.value.replace(/\D/g,'').slice(0,1);
-    el.classList.remove('err');
-    if(el.value && nextIndex < 4){
-      document.getElementById('lawOtpBox'+nextIndex).focus();
-    }
-  }
-  async function verifyLawyerOtp(){
-    const boxes = document.querySelectorAll('.law-otp-box');
-    const code = Array.from(boxes).map(b=>b.value).join('');
-    const errEl = document.getElementById('lawGateStep2Error');
-    if(code.length < 4){
-      errEl.textContent = 'Enter all 4 digits.';
-      errEl.classList.add('show');
-      return;
-    }
-    try{
-      const res = await api('/auth/lawyer/verify-otp', { method:'POST', body:{ otpId: lawyerOtpId, code } });
+      const res = await api('/auth/lawyer/login', { method:'POST', body:{ phone } });
       lawyerToken = res.token;
       currentLawyerProfile = res.lawyer;
-      errEl.classList.remove('show');
+      errEl.style.display = 'none';
       closeLawyerGate();
       goLawyer('dashboard');
       refreshNotifDot();
       showToast('Signed in, this is a real backend session tied to your verified lawyer profile.');
     }catch(e){
-      boxes.forEach(b=>{ b.classList.add('err'); b.value=''; });
-      document.getElementById('lawOtpBox0').focus();
-      errEl.textContent = e.message || 'Incorrect OTP.';
-      errEl.classList.add('show');
+      errEl.textContent = e.message === 'Failed to fetch'
+        ? "Can't reach the backend right now, check that it's running, then try again."
+        : (e.message || 'Could not sign in right now.');
+      errEl.style.display = 'block';
     }
   }
 
@@ -5390,15 +5194,6 @@
     saveState();
     document.getElementById('lawAppConfirm').style.display = 'block';
     document.getElementById('lawAppConfirm').scrollIntoView({behavior:'smooth', block:'center'});
-  }
-
-  // NOTIFICATION CHANNEL PREFERENCE
-  let preferredChannel = 'WhatsApp';
-  function pickChannel(el, channel){
-    document.querySelectorAll('#channelPick .channel-opt').forEach(c=>c.classList.remove('on'));
-    el.classList.add('on');
-    preferredChannel = channel;
-    saveState();
   }
 
   // AADHAAR ESIGN
